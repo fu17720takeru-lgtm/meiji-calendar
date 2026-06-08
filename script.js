@@ -1645,7 +1645,10 @@ function toggleTravelInputs() {
   }
 }
 function saveToLocalStorage() {
-  localStorage.setItem("events", JSON.stringify(events));
+  const eventsToSave = events.filter(e =>
+    !e._fromSchedule && !(typeof e.id === "string" && e.id.startsWith("sched-"))
+  );
+  localStorage.setItem("events", JSON.stringify(eventsToSave));
   syncToServer();
   renderTodayPanel();
 }
@@ -4383,7 +4386,9 @@ function retrySyncNow() {
 
 async function _applyServerData(data) {
   if (Array.isArray(data.events)) {
-    events = data.events;
+    events = data.events.filter(e =>
+      !e._fromSchedule && !(typeof e.id === "string" && e.id.startsWith("sched-"))
+    );
     localStorage.setItem("events", JSON.stringify(events));
   }
   if (Array.isArray(data.todos)) {
@@ -4501,7 +4506,9 @@ async function syncToServer() {
         "Authorization": `Bearer ${authToken}`,
       },
       body: JSON.stringify({
-        events,
+        events: events.filter(e =>
+          !e._fromSchedule && !(typeof e.id === "string" && e.id.startsWith("sched-"))
+        ),
         todos,
         habits,
         classSchedule: obClassSchedule || {},
