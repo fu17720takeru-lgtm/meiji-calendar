@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=45">
+<link rel="stylesheet" href="style.css?v=1.4.2">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -67,7 +67,6 @@
   </div>
 
   <div id="calendar" class="calendar"></div>
-  <div id="today-panel" class="today-panel"></div>
 </div>
 
 <!-- ── タブ: 今日 ── -->
@@ -81,16 +80,6 @@
 
   <!-- ① 今日のサマリーバナー -->
   <div id="todo-summary-banner" class="todo-summary-banner"></div>
-
-  <!-- ① 週の目標 & 達成度 -->
-  <div id="weekly-goals-section" class="weekly-goals-section">
-    <div class="wg-header" onclick="toggleWeeklyGoalsSection()">
-      <span class="wg-title">週の目標</span>
-      <span id="wg-progress-badge" class="wg-progress-badge"></span>
-      <span id="wg-toggle-arrow" class="wg-toggle-arrow">▼</span>
-    </div>
-    <div id="weekly-goals-body" class="weekly-goals-body"></div>
-  </div>
 
   <!-- ② 自動スケジュール結果 -->
   <div id="todo-tab-schedule-result" class="todo-tab-schedule-result hidden"></div>
@@ -195,6 +184,11 @@
 
 </div>
 
+<!-- ── タブ: 記録 ── -->
+<div id="tab-records" class="tab-pane hidden">
+  <div id="records-view" class="rc-scroll"></div>
+</div>
+
 <!-- ── ボトムナビ ── -->
 <nav class="bottom-nav">
   <button class="bnav-btn active" id="bnav-month" onclick="switchTab('month')">
@@ -208,6 +202,10 @@
   <button class="bnav-btn" id="bnav-todo" onclick="switchTab('todo')">
     <span class="bnav-icon">✅</span>
     <span class="bnav-label">ToDo<span id="bnav-todo-badge" class="bnav-badge hidden"></span></span>
+  </button>
+  <button class="bnav-btn" id="bnav-records" onclick="switchTab('records')">
+    <span class="bnav-icon">📊</span>
+    <span class="bnav-label">記録</span>
   </button>
 </nav>
 
@@ -311,9 +309,9 @@
       <div id="time-input-area">
         <p>開始時間</p>
         <div class="time-row">
-          <select id="start-hour"></select>
+          <select id="start-hour" onchange="autoSetEndTime()"></select>
           <span>時</span>
-          <select id="start-minute"></select>
+          <select id="start-minute" onchange="autoSetEndTime()"></select>
           <span>分</span>
         </div>
 
@@ -445,8 +443,8 @@
     <div class="fo-divider"></div>
 
     <!-- メイン操作（下・親指に近い） -->
-    <button class="fo-btn" onclick="openHabitFromPlus()">🔄 習慣を追加</button>
-    <button class="fo-btn" onclick="openTimetableModalFromPlus()">📚 授業を追加</button>
+    <button class="fo-btn" onclick="switchTab('records'); closeFloatingMenu();">🔄 習慣を管理</button>
+    <button class="fo-btn" onclick="openTimetableEditor()">📋 時間割を修正</button>
     <button class="fo-btn" onclick="openTodoFromPlus()">✅ ToDo を追加</button>
     <button class="fo-btn fo-btn-primary" onclick="openAddEventForToday()">📅 予定を追加</button>
 
@@ -514,18 +512,6 @@
     <button onclick="closeTodoModal()">閉じる</button>
   </div>
 </div>
-<!-- 習慣リストモーダル -->
-<div id="habit-list-modal" class="modal hidden" onclick="closeHabitListModalByOutside(event)">
-  <div class="modal-content" onclick="event.stopPropagation()">
-    <div class="habit-modal-header">
-      <h2>習慣</h2>
-      <button class="habit-header-add-btn" onclick="openHabitFormModal()">＋ 追加</button>
-    </div>
-    <div id="habit-modal-body"></div>
-    <button onclick="closeHabitListModal()">閉じる</button>
-  </div>
-</div>
-
 <!-- 習慣追加・編集モーダル -->
 <div id="habit-form-modal" class="modal hidden" onclick="closeHabitFormModalByOutside(event)" data-freq="daily">
   <div class="modal-content" onclick="event.stopPropagation()">
@@ -783,7 +769,7 @@
   </div>
 </div>
 
- <script src="script.js?v=45"></script>
+ <script src="script.js?v=1.4.2"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {
@@ -870,10 +856,15 @@
           <button class="ob-btn-primary ob-inline-btn" onclick="obSaveClass()">登録</button>
         </div>
       </div>
-      <div class="ob-bottom-btns">
+      <!-- オンボーディング用ボタン -->
+      <div id="ob-step2-onboard-btns" class="ob-bottom-btns">
         <button class="ob-btn-back" onclick="obSetStep('1')">← 戻る</button>
         <button class="ob-btn-skip" onclick="obSkipStep2()">スキップ</button>
         <button class="ob-btn-primary ob-inline-btn" onclick="obStep2Next()">次へ</button>
+      </div>
+      <!-- 時間割修正モード用ボタン（＋ボタンから開いた時） -->
+      <div id="ob-step2-edit-btns" class="ob-bottom-btns hidden">
+        <button class="ob-btn-primary" style="width:100%" onclick="saveTimetableEdit()">保存して閉じる</button>
       </div>
     </div>
 

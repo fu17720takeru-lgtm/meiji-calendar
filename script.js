@@ -1005,7 +1005,7 @@ function createCalendar() {
       ...sharedForDay.map(e => ({ ...e, _isShared: true })),
     ].sort((a, b) => sortEventsByTimeAndType(a, b));
 
-    const MAX_CHIPS = 3;
+    const MAX_CHIPS = 5;
     const totalChips = dayTodos.length + dayEvents.length;
     let chipCount = 0;
 
@@ -1804,6 +1804,8 @@ function closeTimetableModalByOutside(event) {
 let todos = JSON.parse(localStorage.getItem("todos")) || [];
 let habits = JSON.parse(localStorage.getItem("habits")) || [];
 let habitLogs = JSON.parse(localStorage.getItem("habitLogs")) || {};
+let habitTimeLogs = JSON.parse(localStorage.getItem("habitTimeLogs")) || {};
+let _habitTimer = { habitId: null, startTime: null, intervalId: null };
 
 function toggleFloatingMenu() {
   const options = document.getElementById("floating-options");
@@ -1832,6 +1834,46 @@ function openTimetableModalFromPlus() {
   openTimetableModal();
 }
 
+function openTimetableEditor() {
+  closeFloatingMenu();
+  // 最新の時間割データをロード
+  const saved = localStorage.getItem("classSchedule");
+  if (saved) {
+    try {
+      const cs = JSON.parse(saved);
+      obClassSchedule = {
+        zenki: Array.isArray(cs.zenki) ? cs.zenki : [],
+        kouki: Array.isArray(cs.kouki) ? cs.kouki : [],
+      };
+    } catch { /* 不正データは無視 */ }
+  }
+  obCurrentSemester = "zenki";
+  // step2だけ表示
+  ["1", "1b", "2", "3", "4"].forEach(s => {
+    document.getElementById(`ob-step-${s}`)?.classList.add("hidden");
+  });
+  document.getElementById("ob-step-2").classList.remove("hidden");
+  // 修正モードのボタンに切り替え
+  document.getElementById("ob-step2-onboard-btns").classList.add("hidden");
+  document.getElementById("ob-step2-edit-btns").classList.remove("hidden");
+  // 前期タブをアクティブに
+  document.getElementById("ob-tab-zenki")?.classList.add("active");
+  document.getElementById("ob-tab-kouki")?.classList.remove("active");
+  // 入力フォームを閉じてグリッドを描画
+  document.getElementById("ob-class-form")?.classList.add("hidden");
+  obRenderTimetable();
+  document.getElementById("onboarding-overlay").classList.remove("hidden");
+}
+
+function saveTimetableEdit() {
+  localStorage.setItem("classSchedule", JSON.stringify(obClassSchedule));
+  obClassesToEvents();
+  // 修正モード終了 → ボタンを元に戻す
+  document.getElementById("ob-step2-onboard-btns").classList.remove("hidden");
+  document.getElementById("ob-step2-edit-btns").classList.add("hidden");
+  document.getElementById("onboarding-overlay").classList.add("hidden");
+}
+
 function openTodoModal() {
   closeFloatingMenu();
   document.getElementById("todo-modal").classList.remove("hidden");
@@ -1851,7 +1893,7 @@ function openTodoFromPlus() {
 
 function openHabitFromPlus() {
   closeFloatingMenu();
-  openHabitListModal();
+  switchTab("records");
 }
 function openBirthdayModal() {
   closeFloatingMenu();
@@ -2078,17 +2120,19 @@ let currentTab = "month";
 
 function switchTab(name) {
   currentTab = name;
-  ["month", "today", "todo"].forEach(t => {
+  ["month", "today", "todo", "records"].forEach(t => {
     document.getElementById(`tab-${t}`)?.classList.toggle("hidden", t !== name);
     document.getElementById(`bnav-${t}`)?.classList.toggle("active", t === name);
   });
   if (name === "today") renderTodayView();
   if (name === "todo") renderTodoTabView();
+  if (name === "records") renderRecordsTab();
 }
 
 function refreshActiveTabView() {
   if (currentTab === "today") renderTodayView();
   if (currentTab === "todo") renderTodoTabView();
+  if (currentTab === "records") renderRecordsTab();
 }
 
 /* ── 今日タブ描画 ─────────────────────────────────────────── */
@@ -2208,7 +2252,6 @@ function switchTodoView(mode) {
 
 function renderTodoTabView() {
   renderTodoSummaryBanner();
-  renderWeeklyGoalsSection();
   if (todoViewMode === "subject") {
     renderTodoTabSubjectView();
   } else if (todoViewMode === "recommended") {
@@ -3746,12 +3789,17 @@ function importShareData() {
       throw new Error("形式が違います");
     }
 
-    events = [...events, ...data.events];
+    // _fromSchedule / sched- イベントは除外してからマージ（重複防止）
+    const importedEvents = data.events.filter(e =>
+      !e._fromSchedule && !(typeof e.id === "string" && e.id.startsWith("sched-"))
+    );
+    events = [...events, ...importedEvents];
     todos = [...todos, ...data.todos];
     if (Array.isArray(data.habits)) habits = [...habits, ...data.habits];
     saveToLocalStorage();
     localStorage.setItem("todos", JSON.stringify(todos));
     localStorage.setItem("habits", JSON.stringify(habits));
+    refreshScheduleEvents();
     createCalendar();
     renderTodayNotice();
     alert("共有データを取り込みました");
@@ -4039,6 +4087,21 @@ function getEventColor(event) {
   if (event.category === "travel") return "#6366f1";
   if (event.category === "birthday") return "#f59e0b";
   return "#3b82f6";
+}
+
+function autoSetEndTime() {
+  const sh = document.getElementById("start-hour");
+  const sm = document.getElementById("start-minute");
+  const eh = document.getElementById("end-hour");
+  const em = document.getElementById("end-minute");
+  if (!sh || !eh) return;
+  const h = parseInt(sh.value, 10);
+  if (isNaN(h)) return;
+  const nextH = h + 1;
+  if (nextH <= 23) {
+    eh.value = String(nextH).padStart(2, "0");
+    if (em && sm) em.value = sm.value;
+  }
 }
 
 function setupTimeSelects() {
@@ -4425,6 +4488,7 @@ async function syncToServer() {
 function saveHabits() {
   localStorage.setItem("habits", JSON.stringify(habits));
   localStorage.setItem("habitLogs", JSON.stringify(habitLogs));
+  localStorage.setItem("habitTimeLogs", JSON.stringify(habitTimeLogs));
   syncToServer();
 }
 
@@ -4493,7 +4557,6 @@ function toggleHabitDone(habitId) {
   if (idx === -1) habitLogs[todayStr].push(habitId);
   else habitLogs[todayStr].splice(idx, 1);
   saveHabits();
-  renderHabitList();
   createCalendar();
   refreshActiveTabView();
 }
@@ -4505,8 +4568,8 @@ function deleteHabit(habitId) {
     habitLogs[date] = habitLogs[date].filter(id => id !== habitId);
   }
   saveHabits();
-  renderHabitList();
   createCalendar();
+  renderRecordsTab();
 }
 
 function renderHabitList() {
@@ -4667,10 +4730,10 @@ function saveHabitFromForm() {
   saveHabits();
   createCalendar();
   closeHabitFormModal();
-  renderHabitList();
+  renderRecordsTab();
 }
 
-function showHabits() { renderHabitList(); }
+function showHabits() { renderRecordsTab(); }
 
 // ─── 電車遅延情報 ─────────────────────────────────────────────────────────────
 async function fetchTrainDelays() {
@@ -5179,7 +5242,11 @@ function obClassesToEvents() {
       }
     });
   });
-  events = events.filter(e => !e._fromSchedule);
+  // _fromScheduleフラグがなくても id が "sched-" で始まるものも除去（旧データ対応）
+  events = events.filter(e =>
+    !e._fromSchedule &&
+    !(typeof e.id === "string" && e.id.startsWith("sched-"))
+  );
   events.push(...newEvents);
   saveToLocalStorage();
   createCalendar();
@@ -5309,7 +5376,7 @@ function addWeeklyGoal() {
   const data = loadWeeklyGoals();
   data.goals.push({ text, done: false });
   saveWeeklyGoals(data);
-  renderWeeklyGoalsSection();
+  renderRecordsTab();
 }
 
 function toggleWeeklyGoal(index) {
@@ -5317,12 +5384,436 @@ function toggleWeeklyGoal(index) {
   if (!data.goals[index]) return;
   data.goals[index].done = !data.goals[index].done;
   saveWeeklyGoals(data);
-  renderWeeklyGoalsSection();
+  renderRecordsTab();
 }
 
 function deleteWeeklyGoal(index) {
   const data = loadWeeklyGoals();
   data.goals.splice(index, 1);
   saveWeeklyGoals(data);
+  renderRecordsTab();
+}
+
+// ─── 記録タブ ──────────────────────────────────────────────────────────────────
+
+function renderRecordsTab() {
+  const container = document.getElementById("records-view");
+  if (!container) return;
+
+  const today = new Date();
+  const todayStr = formatDate(today);
+  const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
+
+  // 週の始め（日曜）
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+
+  // 今週の習慣達成状況を集計
+  const activeHabits = habits.filter(h => !h.archived);
+  let totalInstances = 0, doneInstances = 0;
+  for (let i = 0; i <= today.getDay(); i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dStr = formatDate(d);
+    activeHabits.forEach(h => {
+      if (isHabitActiveOn(h, d)) {
+        totalInstances++;
+        if ((habitLogs[dStr] || []).includes(h.id)) doneInstances++;
+      }
+    });
+  }
+  const habitPct = totalInstances > 0 ? Math.round(doneInstances / totalInstances * 100) : 0;
+
+  // 週の目標達成状況
+  const wgData = loadWeeklyGoals();
+  const wgTotal = wgData.goals.length;
+  const wgDone  = wgData.goals.filter(g => g.done).length;
+  const goalPct = wgTotal > 0 ? Math.round(wgDone / wgTotal * 100) : 0;
+
+  let html = "";
+
+  // ── 今週のまとめ ──
+  html += `<div class="rc-page-title">記録</div>`;
+  html += `<div class="rc-card rc-summary-card">
+    <div class="rc-card-title">今週のまとめ</div>`;
+
+  if (totalInstances > 0) {
+    html += `<div class="rc-summary-row">
+      <span class="rc-summary-label">習慣</span>
+      <div class="rc-bar-wrap"><div class="rc-bar rc-bar-habit" style="width:${habitPct}%"></div></div>
+      <span class="rc-summary-num">${doneInstances}/${totalInstances}回</span>
+    </div>`;
+  } else {
+    html += `<div class="rc-summary-empty">習慣を追加すると達成率が表示されます</div>`;
+  }
+
+  if (wgTotal > 0) {
+    html += `<div class="rc-summary-row">
+      <span class="rc-summary-label">目標</span>
+      <div class="rc-bar-wrap"><div class="rc-bar rc-bar-goal" style="width:${goalPct}%"></div></div>
+      <span class="rc-summary-num">${wgDone}/${wgTotal}個</span>
+    </div>`;
+  }
+
+  html += `</div>`;
+
+  // ── 習慣一覧 ──
+  html += `<div class="rc-section-header">
+    <span class="rc-section-title">習慣</span>
+    <button class="rc-add-btn" onclick="openHabitFormModal()">＋ 追加</button>
+  </div>`;
+
+  if (activeHabits.length === 0) {
+    html += `<div class="rc-card rc-empty-card">
+      <div class="rc-empty-icon">🌱</div>
+      <div class="rc-empty-text">習慣を追加して毎日のルーティンを作りましょう</div>
+      <button class="rc-empty-add-btn" onclick="openHabitFormModal()">＋ 最初の習慣を追加</button>
+    </div>`;
+  } else {
+    activeHabits.forEach(h => {
+      const streak    = getHabitStreak(h.id);
+      const weekCnt   = getHabitWeeklyCount(h.id);
+      const isWeekly  = h.frequencyType === "weekly";
+      const wTarget   = isWeekly ? (h.weeklyTarget || 3) : null;
+      const isDoneToday = isHabitActiveOn(h, today) && (habitLogs[todayStr] || []).includes(h.id);
+      const cleared   = isWeekly && weekCnt >= wTarget;
+      const freqLabel = { daily:"毎日", weekday:"平日", weekend:"週末", weekly:`週${h.weeklyTarget||3}回`, custom:"カスタム" }[h.frequencyType || "daily"];
+
+      // タイマー・時間ログ
+      const todayMin    = _getHabitTodayMinutes(h.id);
+      const goalMin     = h.duration || 30;
+      const timePct     = Math.min(100, Math.round(todayMin / goalMin * 100));
+      const timeDone    = timePct >= 100;
+      const isRunning   = _habitTimer.habitId === h.id;
+      const todayMemo   = (habitTimeLogs[todayStr]?.[h.id]?.memo) || "";
+      const weekMin     = _getHabitWeekMinutes(h.id);
+      const monthMin    = _getHabitMonthMinutes(h.id);
+      const totalMin    = _getHabitTotalMinutes(h.id);
+
+      const achieved = isDoneToday || timeDone || cleared;
+      const cardClass = achieved ? " rc-habit-done-today"
+        : (isWeekly && weekCnt > 0) || todayMin > 0 ? " rc-habit-in-progress" : "";
+
+      html += `<div class="rc-habit-card${cardClass}">
+        <div class="rc-habit-top">
+          <div class="rc-habit-name-row">
+            ${achieved ? `<span class="rc-done-badge">✓</span>` : ""}
+            <span class="rc-habit-name">${escapeHtml(h.text)}</span>
+          </div>
+          <div class="rc-habit-btns">
+            <button class="rc-edit-btn" onclick="openHabitFormModal(${h.id})">編集</button>
+            <button class="rc-del-btn"  onclick="deleteHabit(${h.id})">削除</button>
+          </div>
+        </div>
+        <div class="rc-habit-meta">
+          <span class="rc-meta-tag">${freqLabel}</span>
+          <span class="rc-meta-tag">${formatDuration(goalMin)}</span>
+          ${streak > 1 ? `<span class="rc-meta-streak">🔥 ${streak}日連続</span>` : ""}
+        </div>
+
+        <!-- 今日の時間進捗 -->
+        <div class="rc-today-section">
+          <div class="rc-today-bar-row">
+            <span class="rc-today-label">今日</span>
+            <div class="rc-today-bar-wrap">
+              <div class="rc-today-bar${timeDone ? " rc-today-bar-done" : ""}" style="width:${timePct}%"></div>
+            </div>
+            <span class="rc-today-time">${todayMin}/${goalMin}分</span>
+          </div>
+          <div class="rc-timer-controls">
+            ${isRunning
+              ? `<button class="rc-timer-stop" onclick="stopHabitTimer()">■ 停止</button>
+                 <span class="rc-timer-display" id="ht-display-${h.id}">0:00</span>`
+              : `<button class="rc-timer-start" onclick="startHabitTimer(${h.id})">▶ 開始</button>
+                 ${todayMin > 0 ? `<span class="rc-timer-logged">${_formatMin(todayMin)} 記録済み</span>` : ""}`
+            }
+          </div>
+          <input class="rc-memo-input" id="ht-memo-${h.id}" type="text"
+            placeholder="一言メモ（任意）" value="${escapeHtml(todayMemo)}"
+            onblur="saveHabitMemo(${h.id})">
+        </div>
+
+        <!-- 週N回 or 7日間ドット -->
+        ${isWeekly ? (() => {
+          const wpct = Math.min(100, Math.round(weekCnt / wTarget * 100));
+          return `<div class="rc-weekly-progress">
+            <div class="rc-weekly-bar-wrap">
+              <div class="rc-weekly-bar${cleared ? " rc-weekly-bar-done" : ""}" style="width:${wpct}%"></div>
+            </div>
+            <div class="rc-weekly-status">
+              ${cleared
+                ? `<span class="rc-weekly-clear">今週クリア！🎉</span>`
+                : `<span class="rc-weekly-remain">あと ${wTarget - weekCnt}回</span>`}
+              <span class="rc-weekly-count">${weekCnt}/${wTarget}回</span>
+            </div>
+          </div>
+          <div class="rc-weekly-circles">
+            ${Array.from({length: wTarget}, (_, i) =>
+              `<div class="rc-wc${i < weekCnt ? " rc-wc-done" : ""}"></div>`
+            ).join("")}
+          </div>`;
+        })() : `<div class="rc-week-dots-row">
+          ${_buildHabitWeekDots(h, today, weekStart, dayNames)}
+        </div>`}
+
+        <!-- 累積時間 -->
+        <div class="rc-cumulative">
+          <div class="rc-cum-item">
+            <span class="rc-cum-val">${_formatMin(weekMin)}</span>
+            <span class="rc-cum-label">今週</span>
+          </div>
+          <div class="rc-cum-item">
+            <span class="rc-cum-val">${_formatMin(monthMin)}</span>
+            <span class="rc-cum-label">今月</span>
+          </div>
+          <div class="rc-cum-item">
+            <span class="rc-cum-val">${_formatMin(totalMin)}</span>
+            <span class="rc-cum-label">合計</span>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
+
+  // ── 今月の達成カレンダー ──
+  if (activeHabits.length > 0) {
+    html += _buildMonthCalendar(today, activeHabits);
+  }
+
+  // ── 週の目標（フル管理） ──
+  const goalPctBadge = wgTotal > 0
+    ? `<span class="rc-goal-pct-badge${wgDone === wgTotal ? " rc-badge-all" : ""}">${wgDone}/${wgTotal}</span>`
+    : "";
+  html += `<div class="rc-section-header" style="margin-top:16px">
+    <span class="rc-section-title">週の目標</span>
+    ${goalPctBadge}
+  </div>`;
+
+  html += `<div class="rc-card rc-goals-card">`;
+  if (wgData.goals.length === 0) {
+    html += `<div class="rc-goals-empty">今週の目標を追加しましょう</div>`;
+  } else {
+    wgData.goals.forEach((g, i) => {
+      html += `<div class="rc-goal-row${g.done ? " rc-goal-done" : ""}">
+        <span class="rc-goal-check${g.done ? " rc-goal-checked" : ""}" onclick="toggleWeeklyGoal(${i})">${g.done ? "✓" : ""}</span>
+        <span class="rc-goal-text" onclick="toggleWeeklyGoal(${i})">${escapeHtml(g.text)}</span>
+        <button class="rc-goal-del" onclick="deleteWeeklyGoal(${i})">×</button>
+      </div>`;
+    });
+  }
+  html += `<div class="rc-goals-add-row">
+    <input class="rc-goals-add-input" id="wg-add-input" type="text"
+      placeholder="目標を追加..." maxlength="50"
+      onkeydown="if(event.key==='Enter')addWeeklyGoal()">
+    <button class="rc-goals-add-btn" onclick="addWeeklyGoal()">追加</button>
+  </div>`;
+  html += `</div>`;
+
+  container.innerHTML = html;
+}
+
+function _buildHabitWeekDots(habit, today, weekStart, dayNames) {
+  const todayStr = formatDate(today);
+  let html = "";
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    const dStr   = formatDate(d);
+    const future = d > today;
+    const active = isHabitActiveOn(habit, d);
+    const done   = (habitLogs[dStr] || []).includes(habit.id);
+    const isToday = dStr === todayStr;
+
+    let cls = "rc-dot";
+    if (!active)       cls += " rc-dot-off";
+    else if (future)   cls += " rc-dot-future";
+    else if (done)     cls += " rc-dot-done";
+    else               cls += " rc-dot-miss";
+    if (isToday)       cls += " rc-dot-today";
+
+    const action = active && !future
+      ? `onclick="toggleHabitDone(${habit.id})"` : "";
+    html += `<div class="rc-dot-cell" ${action}>
+      <div class="${cls}"></div>
+      <span class="rc-dot-day">${dayNames[d.getDay()]}</span>
+    </div>`;
+  }
+  return html;
+}
+
+function _buildMonthCalendar(today, activeHabits) {
+  const year  = today.getFullYear();
+  const month = today.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay();
+  const todayStr = formatDate(today);
+  const dayLabels = ["日","月","火","水","木","金","土"];
+
+  let html = `<div class="rc-section-header" style="margin-top:16px">
+    <span class="rc-section-title">${month + 1}月の達成</span>
+  </div>
+  <div class="rc-month-card">
+    <div class="rc-month-dow-row">
+      ${dayLabels.map(l => `<div class="rc-month-dow">${l}</div>`).join("")}
+    </div>
+    <div class="rc-month-grid">`;
+
+  // 空白セル
+  for (let i = 0; i < firstDow; i++) {
+    html += `<div class="rc-mc-cell rc-mc-empty"></div>`;
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d    = new Date(year, month, day);
+    const dStr = formatDate(d);
+    const future = d > today;
+    const isToday = dStr === todayStr;
+
+    let level = 0;
+    if (!future) {
+      let active = 0, done = 0;
+      activeHabits.forEach(h => {
+        if (isHabitActiveOn(h, d)) {
+          active++;
+          if ((habitLogs[dStr] || []).includes(h.id)) done++;
+        }
+      });
+      if (active > 0) {
+        const ratio = done / active;
+        if (ratio === 1)       level = 3;
+        else if (ratio >= 0.5) level = 2;
+        else if (ratio > 0)    level = 1;
+      }
+    }
+
+    html += `<div class="rc-mc-cell rc-mc-lv${level}${future ? " rc-mc-future" : ""}${isToday ? " rc-mc-today" : ""}">
+      <span class="rc-mc-num">${day}</span>
+    </div>`;
+  }
+
+  html += `</div>
+    <div class="rc-month-legend">
+      <div class="rc-mc-cell rc-mc-lv0 rc-ml-cell"></div><span>なし</span>
+      <div class="rc-mc-cell rc-mc-lv1 rc-ml-cell"></div><span>一部</span>
+      <div class="rc-mc-cell rc-mc-lv2 rc-ml-cell"></div><span>半分+</span>
+      <div class="rc-mc-cell rc-mc-lv3 rc-ml-cell"></div><span>全達成</span>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+function toggleWeeklyGoalFromRecords(index) {
+  const data = loadWeeklyGoals();
+  if (!data.goals[index]) return;
+  data.goals[index].done = !data.goals[index].done;
+  saveWeeklyGoals(data);
   renderWeeklyGoalsSection();
+  renderRecordsTab();
+}
+
+// ─── 習慣タイマー・時間ログ ───────────────────────────────────────────────────
+
+function _getHabitTodayMinutes(habitId) {
+  return (habitTimeLogs[formatDate(new Date())]?.[habitId]?.minutes) || 0;
+}
+
+function _getHabitWeekMinutes(habitId) {
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay());
+  let total = 0;
+  for (let i = 0; i <= today.getDay(); i++) {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    total += (habitTimeLogs[formatDate(d)]?.[habitId]?.minutes) || 0;
+  }
+  return total;
+}
+
+function _getHabitMonthMinutes(habitId) {
+  const today = new Date();
+  const y = today.getFullYear(), m = today.getMonth();
+  let total = 0;
+  for (const dStr in habitTimeLogs) {
+    const d = new Date(dStr);
+    if (d.getFullYear() === y && d.getMonth() === m)
+      total += (habitTimeLogs[dStr]?.[habitId]?.minutes) || 0;
+  }
+  return total;
+}
+
+function _getHabitTotalMinutes(habitId) {
+  let total = 0;
+  for (const dStr in habitTimeLogs)
+    total += (habitTimeLogs[dStr]?.[habitId]?.minutes) || 0;
+  return total;
+}
+
+function _formatMin(min) {
+  if (!min) return "0分";
+  if (min < 60) return `${min}分`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m > 0 ? `${h}時間${m}分` : `${h}時間`;
+}
+
+function startHabitTimer(habitId) {
+  if (_habitTimer.intervalId) {
+    clearInterval(_habitTimer.intervalId);
+    _habitTimer = { habitId: null, startTime: null, intervalId: null };
+  }
+  _habitTimer.habitId = habitId;
+  _habitTimer.startTime = Date.now();
+  _habitTimer.intervalId = setInterval(() => _tickHabitTimer(habitId), 1000);
+  renderRecordsTab();
+}
+
+function stopHabitTimer() {
+  if (!_habitTimer.intervalId) return;
+  clearInterval(_habitTimer.intervalId);
+
+  const elapsed = Math.floor((Date.now() - _habitTimer.startTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const habitId = _habitTimer.habitId;
+  _habitTimer = { habitId: null, startTime: null, intervalId: null };
+
+  if (minutes > 0) {
+    const todayStr = formatDate(new Date());
+    if (!habitTimeLogs[todayStr]) habitTimeLogs[todayStr] = {};
+    if (!habitTimeLogs[todayStr][habitId]) habitTimeLogs[todayStr][habitId] = { minutes: 0, memo: "" };
+    habitTimeLogs[todayStr][habitId].minutes += minutes;
+
+    // 目標時間に到達したら自動チェック
+    const habit = habits.find(h => h.id === habitId);
+    if (habit && habitTimeLogs[todayStr][habitId].minutes >= (habit.duration || 30)) {
+      if (!habitLogs[todayStr]) habitLogs[todayStr] = [];
+      if (!habitLogs[todayStr].includes(habitId)) habitLogs[todayStr].push(habitId);
+    }
+    saveHabits();
+    createCalendar();
+  }
+  renderRecordsTab();
+}
+
+function _tickHabitTimer(habitId) {
+  const el = document.getElementById(`ht-display-${habitId}`);
+  if (!el) {
+    clearInterval(_habitTimer.intervalId);
+    _habitTimer.intervalId = null;
+    return;
+  }
+  const elapsed = Math.floor((Date.now() - _habitTimer.startTime) / 1000);
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  el.textContent = `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function saveHabitMemo(habitId) {
+  const input = document.getElementById(`ht-memo-${habitId}`);
+  if (!input) return;
+  const todayStr = formatDate(new Date());
+  if (!habitTimeLogs[todayStr]) habitTimeLogs[todayStr] = {};
+  if (!habitTimeLogs[todayStr][habitId]) habitTimeLogs[todayStr][habitId] = { minutes: 0, memo: "" };
+  habitTimeLogs[todayStr][habitId].memo = input.value.trim();
+  localStorage.setItem("habitTimeLogs", JSON.stringify(habitTimeLogs));
 }

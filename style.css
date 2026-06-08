@@ -643,7 +643,7 @@ textarea {
   body {
     display: flex;
     flex-direction: column;
-    padding: 0;
+    padding: 0 0 calc(50px + env(safe-area-inset-bottom));
   }
 
   .calendar-top {
@@ -719,7 +719,7 @@ textarea {
     max-width: none;
     margin: 0;
 
-    flex: 0 0 42dvh;
+    flex: 1;
     min-height: 0;
 
     display: grid;
@@ -729,29 +729,18 @@ textarea {
 
     overflow: hidden;
 
-    border-left: 1px solid #dddddd;
-  }
-
-  #today-panel {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 10px 12px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
-    background: #f9fafb;
-    border-top: 1px solid #e5e7eb;
+    border-left: 1px solid #e5e7eb;
   }
 
   .day {
     min-height: 0;
     height: auto;
 
-    padding: 3px;
+    padding: 3px 2px;
 
     border: none;
-    border-right: 1px solid #dddddd;
-    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
     border-radius: 0;
 
     background: #ffffff;
@@ -760,31 +749,38 @@ textarea {
 
   .empty {
     background: #ffffff;
-    border-right: 1px solid #dddddd;
-    border-bottom: 1px solid #dddddd;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
   }
 
   .day strong {
     display: block;
     align-self: flex-start;
-    margin-bottom: 3px;
+    margin-bottom: 2px;
     font-size: 11px;
     line-height: 1;
+    font-weight: 600;
+    color: #374151;
   }
 
   .label {
     margin-top: 1px;
-    padding: 1px 4px;
+    padding: 1px 3px;
     font-size: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .event,
   .event-title,
   .todo-deadline {
     margin-top: 1px;
-    padding: 1px 4px;
+    padding: 1px 3px;
     font-size: 9px;
-    line-height: 1.25;
+    line-height: 1.3;
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 3px;
   }
 
   #modal {
@@ -1165,20 +1161,28 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
    今日のセル（TimeTreeスタイル）
 ========================= */
 .today-cell {
-  background: #eff6ff !important;
-  border: 2px solid #93c5fd !important;
-  border-radius: 6px;
+  background: #ffffff !important;
 }
 
 .today-num {
-  color: #2563eb !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #2563eb;
+  color: #ffffff !important;
+  border-radius: 50%;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 @media (max-width: 768px) {
   .today-num {
-    font-size: 12px;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
   }
 }
 
@@ -2757,10 +2761,11 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
     font-size: 11px !important;
   }
 }
-/* 今日セルの背景は薄くして丸を目立たせる */
+/* 今日セルは白のまま、丸バッジで強調 */
 .today-cell {
-  background: #f0f7ff !important;
-  border: 1.5px solid #bfdbfe !important;
+  background: #ffffff !important;
+  border-right: 1px solid #e5e7eb !important;
+  border-bottom: 1px solid #e5e7eb !important;
 }
 
 /* ── 月チップ: 角丸を適度に ─────────────────────────────── */
@@ -3766,3 +3771,371 @@ body.sync-visible {
   font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .wg-add-btn:active { background: #1d4ed8; }
+
+/* ─── 記録タブ ──────────────────────────────────────────────── */
+.rc-scroll {
+  padding: 16px 14px 120px;
+  overflow-y: auto;
+  height: 100%;
+}
+.rc-page-title {
+  font-size: 20px; font-weight: 700; color: #111827;
+  margin-bottom: 14px;
+}
+.rc-card {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.rc-card-title {
+  font-size: 13px; font-weight: 600; color: #6b7280;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: 10px;
+}
+.rc-summary-card { margin-bottom: 20px; }
+.rc-summary-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px;
+}
+.rc-summary-row:last-child { margin-bottom: 0; }
+.rc-summary-label {
+  font-size: 13px; font-weight: 600; color: #374151;
+  min-width: 36px;
+}
+.rc-bar-wrap {
+  flex: 1; height: 8px; background: #e5e7eb; border-radius: 99px; overflow: hidden;
+}
+.rc-bar {
+  height: 100%; border-radius: 99px; transition: width .4s ease;
+}
+.rc-bar-habit { background: linear-gradient(90deg, #10b981, #34d399); }
+.rc-bar-goal  { background: linear-gradient(90deg, #6366f1, #818cf8); }
+.rc-summary-num {
+  font-size: 12px; color: #6b7280; min-width: 50px; text-align: right;
+}
+.rc-summary-empty {
+  font-size: 13px; color: #9ca3af; text-align: center; padding: 6px 0;
+}
+
+.rc-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 0 10px;
+}
+.rc-section-title {
+  font-size: 15px; font-weight: 700; color: #111827;
+}
+.rc-add-btn {
+  font-size: 13px; font-weight: 600; color: #2563eb;
+  background: none; border: 1.5px solid #2563eb;
+  border-radius: 20px; padding: 4px 12px; cursor: pointer;
+}
+.rc-add-btn:active { background: #eff6ff; }
+
+.rc-empty-card {
+  text-align: center; padding: 28px 16px;
+}
+.rc-empty-icon { font-size: 36px; margin-bottom: 8px; }
+.rc-empty-text { font-size: 14px; color: #6b7280; margin-bottom: 14px; }
+.rc-empty-add-btn {
+  background: #2563eb; color: #fff;
+  border: none; border-radius: 20px;
+  padding: 8px 20px; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+/* 習慣カード */
+.rc-habit-card {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  padding: 12px 14px; margin-bottom: 10px;
+  transition: box-shadow .15s;
+}
+.rc-habit-card.rc-habit-done-today {
+  border-left: 4px solid #10b981;
+}
+.rc-habit-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 6px;
+}
+.rc-habit-name-row {
+  display: flex; align-items: center; gap: 6px; flex: 1;
+}
+.rc-done-badge {
+  background: #10b981; color: #fff;
+  font-size: 10px; font-weight: 700;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rc-habit-name {
+  font-size: 15px; font-weight: 600; color: #111827;
+}
+.rc-habit-btns {
+  display: flex; gap: 6px; margin-left: 8px; flex-shrink: 0;
+}
+.rc-edit-btn, .rc-del-btn {
+  font-size: 12px; padding: 3px 10px; border-radius: 6px;
+  border: 1px solid #e5e7eb; background: #f9fafb;
+  cursor: pointer; color: #374151; font-weight: 500;
+}
+.rc-del-btn { color: #ef4444; }
+.rc-edit-btn:active { background: #f3f4f6; }
+.rc-del-btn:active  { background: #fef2f2; }
+
+.rc-habit-meta {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
+}
+.rc-meta-tag {
+  font-size: 11px; color: #6b7280;
+  background: #f3f4f6; border-radius: 6px; padding: 2px 7px;
+}
+.rc-meta-streak {
+  font-size: 11px; color: #f97316; font-weight: 700;
+  background: #fff7ed; border-radius: 6px; padding: 2px 7px;
+}
+.rc-meta-week {
+  font-size: 11px; color: #2563eb;
+  background: #eff6ff; border-radius: 6px; padding: 2px 7px;
+}
+
+/* 週間ドット */
+.rc-week-dots-row {
+  display: flex; justify-content: space-between;
+}
+.rc-dot-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.rc-dot-cell:active .rc-dot { opacity: .7; }
+.rc-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  transition: background .15s;
+}
+.rc-dot-done    { background: #10b981; }
+.rc-dot-miss    { background: #fee2e2; }
+.rc-dot-off     { background: #f3f4f6; }
+.rc-dot-future  { background: #f3f4f6; opacity: .4; }
+.rc-dot-today.rc-dot-done { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #10b981; }
+.rc-dot-today.rc-dot-miss { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ef4444; }
+.rc-dot-today.rc-dot-off  { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #9ca3af; }
+.rc-dot-day {
+  font-size: 10px; color: #9ca3af; font-weight: 500;
+}
+
+/* 月間達成カレンダー */
+.rc-month-card {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  padding: 12px 10px; margin-bottom: 12px;
+}
+.rc-month-dow-row {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.rc-month-dow {
+  text-align: center; font-size: 10px; color: #9ca3af; font-weight: 600;
+}
+.rc-month-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px;
+}
+.rc-mc-cell {
+  aspect-ratio: 1; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.rc-mc-num {
+  font-size: 10px; font-weight: 600; position: relative; z-index: 1;
+}
+.rc-mc-empty  { background: transparent; }
+.rc-mc-future { background: #f9fafb; }
+.rc-mc-lv0 { background: #f3f4f6; }
+.rc-mc-lv0 .rc-mc-num { color: #9ca3af; }
+.rc-mc-lv1 { background: #d1fae5; }
+.rc-mc-lv1 .rc-mc-num { color: #065f46; }
+.rc-mc-lv2 { background: #6ee7b7; }
+.rc-mc-lv2 .rc-mc-num { color: #064e3b; }
+.rc-mc-lv3 { background: #10b981; }
+.rc-mc-lv3 .rc-mc-num { color: #fff; }
+.rc-mc-today {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+.rc-ml-cell {
+  width: 18px; height: 18px; border-radius: 4px;
+  aspect-ratio: unset; display: inline-flex;
+}
+.rc-month-legend {
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 8px; justify-content: flex-end;
+  font-size: 10px; color: #6b7280;
+}
+
+/* 記録タブ内の週の目標サマリー */
+.rc-goals-card {
+  background: #fff; border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,.07);
+  padding: 4px 4px; margin-bottom: 6px;
+  overflow: hidden;
+}
+.rc-goal-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+}
+.rc-goal-row:last-child { border-bottom: none; }
+.rc-goal-row:active { background: #f9fafb; }
+.rc-goal-done { opacity: .55; }
+.rc-goal-check {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid #d1d5db; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: transparent; flex-shrink: 0;
+}
+.rc-goal-checked {
+  background: #6366f1; border-color: #6366f1; color: #fff;
+}
+.rc-goal-text {
+  font-size: 14px; color: #374151; flex: 1;
+}
+.rc-goal-done .rc-goal-text {
+  text-decoration: line-through; color: #9ca3af;
+}
+.rc-goal-pct-badge {
+  font-size: 12px; font-weight: 700; color: #6366f1;
+  background: #eef2ff; border-radius: 20px; padding: 2px 10px;
+}
+.rc-goal-pct-badge.rc-badge-all {
+  background: #d1fae5; color: #059669;
+}
+/* タイマー・時間ログ */
+.rc-today-section {
+  background: #f9fafb; border-radius: 10px;
+  padding: 10px 12px; margin: 8px 0;
+}
+.rc-today-bar-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.rc-today-label {
+  font-size: 11px; font-weight: 600; color: #6b7280; min-width: 26px;
+}
+.rc-today-bar-wrap {
+  flex: 1; height: 7px; background: #e5e7eb; border-radius: 99px; overflow: hidden;
+}
+.rc-today-bar {
+  height: 100%; background: #f59e0b; border-radius: 99px; transition: width .4s ease;
+}
+.rc-today-bar-done { background: #10b981; }
+.rc-today-time {
+  font-size: 11px; color: #374151; font-weight: 600; min-width: 52px; text-align: right;
+}
+.rc-timer-controls {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.rc-timer-start {
+  background: #2563eb; color: #fff;
+  border: none; border-radius: 20px;
+  padding: 6px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; letter-spacing: .02em;
+}
+.rc-timer-start:active { background: #1d4ed8; }
+.rc-timer-stop {
+  background: #ef4444; color: #fff;
+  border: none; border-radius: 20px;
+  padding: 6px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+.rc-timer-stop:active { background: #dc2626; }
+.rc-timer-display {
+  font-size: 20px; font-weight: 700; color: #111827;
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
+.rc-timer-logged {
+  font-size: 12px; color: #059669; font-weight: 600;
+}
+.rc-memo-input {
+  width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 7px 10px; font-size: 13px; color: #374151;
+  background: #fff; outline: none; box-sizing: border-box;
+  transition: border-color .15s;
+}
+.rc-memo-input:focus { border-color: #2563eb; }
+
+/* 累積時間 */
+.rc-cumulative {
+  display: flex; justify-content: space-around;
+  padding: 8px 0 2px; border-top: 1px solid #f3f4f6; margin-top: 8px;
+}
+.rc-cum-item {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.rc-cum-val {
+  font-size: 14px; font-weight: 700; color: #111827;
+}
+.rc-cum-label {
+  font-size: 10px; color: #9ca3af; font-weight: 500;
+}
+
+/* 週N回ハビット */
+.rc-habit-cleared     { border-left: 4px solid #10b981; }
+.rc-habit-in-progress { border-left: 4px solid #f59e0b; }
+.rc-done-badge-clear  { background: #10b981; }
+
+.rc-weekly-progress { margin: 6px 0 8px; }
+.rc-weekly-bar-wrap {
+  height: 8px; background: #e5e7eb; border-radius: 99px;
+  overflow: hidden; margin-bottom: 5px;
+}
+.rc-weekly-bar {
+  height: 100%; background: #f59e0b; border-radius: 99px;
+  transition: width .4s ease;
+}
+.rc-weekly-bar-done { background: #10b981; }
+
+.rc-weekly-status {
+  display: flex; justify-content: space-between; align-items: center;
+}
+.rc-weekly-remain {
+  font-size: 12px; color: #6b7280;
+}
+.rc-weekly-clear {
+  font-size: 12px; font-weight: 700; color: #059669;
+}
+.rc-weekly-count {
+  font-size: 12px; font-weight: 600; color: #374151;
+}
+
+.rc-weekly-circles {
+  display: flex; gap: 6px; margin-top: 2px; flex-wrap: wrap;
+}
+.rc-wc {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #e5e7eb; border: 2px solid #d1d5db;
+  transition: background .15s, border-color .15s;
+}
+.rc-wc-done {
+  background: #10b981; border-color: #10b981;
+}
+
+.rc-goals-empty {
+  font-size: 13px; color: #9ca3af; text-align: center;
+  padding: 12px 0 4px;
+}
+.rc-goal-del {
+  font-size: 14px; color: #9ca3af; background: none; border: none;
+  cursor: pointer; padding: 0 4px; line-height: 1; flex-shrink: 0;
+}
+.rc-goal-del:active { color: #ef4444; }
+.rc-goals-add-row {
+  display: flex; gap: 8px; padding: 10px 12px;
+  border-top: 1px solid #f3f4f6;
+}
+.rc-goals-add-input {
+  flex: 1; border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 7px 10px; font-size: 13px; outline: none;
+  background: #f9fafb;
+}
+.rc-goals-add-input:focus { border-color: #6366f1; background: #fff; }
+.rc-goals-add-btn {
+  background: #6366f1; color: #fff;
+  border: none; border-radius: 8px; padding: 7px 14px;
+  font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.rc-goals-add-btn:active { background: #4f46e5; }
