@@ -2049,14 +2049,14 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
 .ob-input {
   display: block; width: 100%; box-sizing: border-box;
   padding: 11px 12px; border: 1px solid #d1d5db;
-  border-radius: 8px; font-size: 15px; margin-bottom: 10px; outline: none;
+  border-radius: 8px; font-size: 16px; margin-bottom: 10px; outline: none;
 }
 .ob-input:focus { border-color: #2563eb; }
 
 .ob-select {
   display: block; width: 100%; box-sizing: border-box;
   padding: 11px 12px; border: 1px solid #d1d5db;
-  border-radius: 8px; font-size: 15px; margin-bottom: 12px;
+  border-radius: 8px; font-size: 16px; margin-bottom: 12px;
   background: #fff; outline: none;
 }
 
