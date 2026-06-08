@@ -1230,7 +1230,7 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
   border: 1px solid #d1d5db;
   border-radius: 999px;
   background: #f9fafb;
-  font-size: 15px;
+  font-size: 16px;
   margin-bottom: 8px;
 }
 
@@ -2241,7 +2241,7 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
 .popup-todo-input {
   width: 100%; box-sizing: border-box;
   border: 1px solid #d1d5db; border-radius: 8px;
-  padding: 8px 10px; font-size: 14px; margin-bottom: 8px;
+  padding: 8px 10px; font-size: 16px; margin-bottom: 8px;
 }
 .popup-todo-form-btns {
   display: flex; gap: 8px; justify-content: flex-end;
@@ -3445,19 +3445,19 @@ body.sync-visible {
 .ttaf-field input,
 .ttaf-field select {
   width: 100%;
-  font-size: 13px;
+  font-size: 16px;
   padding: 6px 8px;
 }
 #ttaf-text {
   width: 100%;
   margin-bottom: 8px;
-  font-size: 15px;
+  font-size: 16px;
   padding: 10px 12px;
 }
 #ttaf-memo {
   width: 100%;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 16px;
   padding: 8px 10px;
   resize: vertical;
 }
