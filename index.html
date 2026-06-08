@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=45">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -783,7 +783,18 @@
   </div>
 </div>
 
- <script src="script.js?v=44"></script>
+ <script src="script.js?v=45"></script>
+<script>
+  // Service Workerが更新されたら自動リロード
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'SW_UPDATED') window.location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      reg.update(); // 起動のたびにSW更新チェック
+    });
+  }
+</script>
 
 <!-- ─── オンボーディング ─────────────────────────────────── -->
 <div id="onboarding-overlay" class="hidden">
