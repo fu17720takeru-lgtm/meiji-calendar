@@ -1,4 +1,4 @@
-const CACHE_NAME = "calendar-v1.4.7";
+const CACHE_NAME = "calendar-v1.4.8";
 
 self.addEventListener("install", () => self.skipWaiting());
 

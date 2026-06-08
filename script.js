@@ -1312,12 +1312,6 @@ function showEditForm(index) {
   document.getElementById("repeat-weeks").value = event.repeatWeeks || "0";
   document.getElementById("event-category").value = event.category || "normal";
 
-  const notifyEnabled = document.getElementById("notify-enabled");
-  const notifyMinutes = document.getElementById("notify-minutes");
-  if (notifyEnabled) notifyEnabled.checked = Boolean(event.notify?.enabled);
-  if (notifyMinutes) notifyMinutes.value = String(event.notify?.minutesBefore || 10);
-  toggleNotifyInputs();
-
   const hasTravel = document.getElementById("has-travel");
   if (hasTravel) hasTravel.checked = Boolean(event.needsCommute || event.hasTravel);
   toggleTravelInputs();
@@ -1352,8 +1346,6 @@ function saveEvent() {
   const repeat = document.getElementById("repeat").value;
   const repeatWeeks = Number(document.getElementById("repeat-weeks").value);
   const category = document.getElementById("event-category")?.value || "normal";
-  const notifyEnabled = document.getElementById("notify-enabled")?.checked || false;
-  const notifyMinutes = Number(document.getElementById("notify-minutes")?.value || 10);
   const multiDay = document.getElementById("multi-day")?.checked || false;
   const multiEndDate = document.getElementById("multi-end-date")?.value || "";
 
@@ -1395,10 +1387,6 @@ function saveEvent() {
     category: category,
     needsCommute: hasTravel,
     color: color,
-    notify: {
-      enabled: notifyEnabled,
-      minutesBefore: notifyMinutes
-    }
   };
 
   if (editingIndex === null) {
@@ -1523,11 +1511,29 @@ function toggleAllDayInputs() {
   }
 }
 
-function toggleNotifyInputs() {
-  const notifyEnabled = document.getElementById("notify-enabled");
-  const notifyInputs = document.getElementById("notify-inputs");
-  if (!notifyEnabled || !notifyInputs) return;
-  notifyInputs.classList.toggle("hidden", !notifyEnabled.checked);
+// ─── グローバル通知設定 ───────────────────────────────────────────────────────
+let classNotifSettings = { enabled: false, minutesBefore: 30 };
+
+function loadClassNotifSettings() {
+  try {
+    const saved = localStorage.getItem("classNotifSettings");
+    if (saved) classNotifSettings = JSON.parse(saved);
+  } catch { /* 無視 */ }
+  const cb = document.getElementById("notif-class-enabled");
+  const sel = document.getElementById("notif-class-minutes");
+  const row = document.getElementById("notif-class-timing-row");
+  if (cb) cb.checked = classNotifSettings.enabled;
+  if (sel) sel.value = String(classNotifSettings.minutesBefore);
+  if (row) row.classList.toggle("hidden", !classNotifSettings.enabled);
+}
+
+function saveClassNotifSettings() {
+  const enabled = document.getElementById("notif-class-enabled")?.checked ?? false;
+  const minutesBefore = Number(document.getElementById("notif-class-minutes")?.value || 30);
+  classNotifSettings = { enabled, minutesBefore };
+  localStorage.setItem("classNotifSettings", JSON.stringify(classNotifSettings));
+  const row = document.getElementById("notif-class-timing-row");
+  if (row) row.classList.toggle("hidden", !enabled);
 }
 
 function toggleMultiDayInputs() {
@@ -1610,19 +1616,14 @@ if (travelMinutes) travelMinutes.value = "30";
 
 const allDay = document.getElementById("all-day");
 const eventCategory = document.getElementById("event-category");
-const notifyEnabled = document.getElementById("notify-enabled");
-const notifyMinutes = document.getElementById("notify-minutes");
 const multiDay = document.getElementById("multi-day");
 const multiEndDate = document.getElementById("multi-end-date");
 
 if (allDay) allDay.checked = false;
 if (eventCategory) eventCategory.value = "normal";
-if (notifyEnabled) notifyEnabled.checked = false;
-if (notifyMinutes) notifyMinutes.value = "10";
 if (multiDay) multiDay.checked = false;
 if (multiEndDate) multiEndDate.value = "";
 toggleAllDayInputs();
-toggleNotifyInputs();
 toggleMultiDayInputs();
 
 const colorInput = document.getElementById("event-color");
@@ -3574,10 +3575,11 @@ function _urlBase64ToUint8Array(base64String) {
 function checkEventNotifications() {
   if (!("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
+  if (!classNotifSettings.enabled) return;
 
   const now = new Date();
   const todayString = formatDate(now);
-  const NOTIFY_MINUTES_BEFORE = 30;
+  const NOTIFY_MINUTES_BEFORE = classNotifSettings.minutesBefore;
 
   events.forEach(event => {
     if (event.allDay || event.date !== todayString || !event.startTime) return;
@@ -3723,6 +3725,7 @@ function openCommuteModal() {
   document.getElementById("default-commute-minutes").value = String(commuteSettings.defaultCommuteMinutes || 0);
   document.getElementById("delay-minutes").value = String(commuteSettings.delayMinutes || 0);
   loadTodoNotifSettingsToUI();
+  loadClassNotifSettings();
   renderCommuteAdvice();
   fetchTrainDelays();
 }
@@ -3918,6 +3921,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setupTimeSelects();
   }
 
+  loadClassNotifSettings();
   createCalendar();
   updateMonthLabel();
   setupCalendarSwipe();

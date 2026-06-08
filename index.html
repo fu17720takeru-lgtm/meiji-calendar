@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=1.4.7">
+<link rel="stylesheet" href="style.css?v=1.4.8">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -376,21 +376,6 @@
         </div>
         <input type="hidden" id="event-color" value="#3b82f6">
 
-        <label class="notify-row">
-          <input id="notify-enabled" type="checkbox" onchange="toggleNotifyInputs()">
-          通知する
-        </label>
-        <div id="notify-inputs" class="hidden">
-          <select id="notify-minutes">
-            <option value="5">5分前</option>
-            <option value="10">10分前</option>
-            <option value="15">15分前</option>
-            <option value="30">30分前</option>
-            <option value="60">1時間前</option>
-            <option value="1440">前日</option>
-          </select>
-        </div>
-
         <label class="multi-day-row">
           <input id="multi-day" type="checkbox" onchange="toggleMultiDayInputs()">
           複数日程を一気に登録する
@@ -628,8 +613,24 @@
       <option value="30">30分遅延</option>
     </select>
 
+    <hr style="margin:14px 0; border-color:#f3f4f6;">
+    <p><strong>🔔 授業・予定の通知</strong></p>
+    <label class="notif-toggle-row">
+      <input type="checkbox" id="notif-class-enabled" onchange="saveClassNotifSettings()">
+      <span>授業・予定の開始前に通知する</span>
+    </label>
+    <div id="notif-class-timing-row" class="hidden" style="margin-top:8px">
+      <select id="notif-class-minutes" onchange="saveClassNotifSettings()" style="font-size:16px;width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:8px">
+        <option value="5">5分前</option>
+        <option value="10">10分前</option>
+        <option value="15">15分前</option>
+        <option value="30" selected>30分前</option>
+        <option value="60">1時間前</option>
+      </select>
+    </div>
+
     <button onclick="saveCommuteSettings()">保存</button>
-    <button onclick="requestNotificationPermission()">🔔 授業通知を有効にする</button>
+    <button onclick="requestNotificationPermission()">🔔 通知を許可する</button>
 
     <hr style="margin:14px 0; border-color:#f3f4f6;">
     <p><strong>📌 ToDo・課題通知</strong></p>
@@ -771,7 +772,7 @@
   </div>
 </div>
 
- <script src="script.js?v=1.4.7"></script>
+ <script src="script.js?v=1.4.8"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {
