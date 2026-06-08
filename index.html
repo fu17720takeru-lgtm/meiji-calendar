@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=1.4.6">
+<link rel="stylesheet" href="style.css?v=1.4.7">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -54,6 +54,7 @@
     <span class="cl-dot cl-deadline">締切</span>
     <span class="cl-dot cl-travel">移動</span>
     <span class="cl-dot cl-habit">習慣</span>
+    <span class="cl-dot cl-test">テスト</span>
   </div>
 
   <div id="weekdays">
@@ -357,6 +358,7 @@
         <p>予定の種類</p>
         <select id="event-category">
           <option value="normal">普通の予定</option>
+          <option value="test">📝 テスト・試験</option>
           <option value="seminar">ゼミ</option>
           <option value="class">授業</option>
         </select>
@@ -769,7 +771,7 @@
   </div>
 </div>
 
- <script src="script.js?v=1.4.6"></script>
+ <script src="script.js?v=1.4.7"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {

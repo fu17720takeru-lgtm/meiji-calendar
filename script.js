@@ -1055,7 +1055,9 @@ function createCalendar() {
         eventDiv.classList.add("travel-event");
       }
 
-      if (event._isShared) {
+      if (event.category === "test") {
+        eventDiv.classList.add("test-event");
+      } else if (event._isShared) {
         eventDiv.classList.add("shared-event");
       } else if (event.color) {
         eventDiv.style.background = event.color;
@@ -1063,6 +1065,8 @@ function createCalendar() {
 
       if (event.category === "birthday") {
         eventDiv.textContent = event.title;
+      } else if (event.category === "test") {
+        eventDiv.textContent = "📝 " + event.title.substring(0, 5);
       } else {
         eventDiv.textContent = event.title.substring(0, 6);
       }
@@ -2158,6 +2162,26 @@ function renderTodayView() {
     .sort((a, b) => a.deadline.localeCompare(b.deadline));
 
   let html = `<div class="tv-date-header">${displayDate}</div>`;
+
+  // テストカウントダウン
+  const upcomingTests = events
+    .filter(e => e.category === "test" && e.date >= todayStr)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+  if (upcomingTests.length > 0) {
+    html += `<div class="tv-test-section">`;
+    upcomingTests.forEach(e => {
+      const days = Math.round((new Date(e.date) - new Date(todayStr)) / (1000 * 60 * 60 * 24));
+      const urgency = days === 0 ? "today" : days <= 3 ? "danger" : days <= 7 ? "warning" : "normal";
+      const daysLabel = days === 0 ? "今日！" : `${days}日後`;
+      html += `<div class="tv-test-card tv-test-${urgency}">
+        <div class="tv-test-days">${daysLabel}</div>
+        <div class="tv-test-name">${escapeHtml(e.title)}</div>
+        <div class="tv-test-date">${e.date.slice(5).replace("-", "/")}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
 
   if (overdueTodos.length > 0) {
     html += `<div class="tv-overdue-alert">⚠️ 期限切れToDo ${overdueTodos.length}件</div>`;
