@@ -12,6 +12,7 @@ let selectedDate = null;
 let editingIndex = null;
 
 let events = JSON.parse(localStorage.getItem("events")) || [];
+let cancelledClasses = new Set(JSON.parse(localStorage.getItem("cancelledClasses") || "[]"));
 
 const periodTimes = {
   1: { start: "09:00", end: "10:40" },
@@ -1543,6 +1544,14 @@ function toggleMultiDayInputs() {
   multiDayInputs.classList.toggle("hidden", !multiDay.checked);
 }
 
+function cancelClassEvent(id) {
+  if (!confirm("この日の授業を休講にしますか？\n（時間割を再保存すると元に戻せます）")) return;
+  cancelledClasses.add(id);
+  localStorage.setItem("cancelledClasses", JSON.stringify([...cancelledClasses]));
+  obClassesToEvents();
+  closeModal();
+}
+
 function deleteSingleEvent(index) {
   const result = confirm("この予定だけ削除しますか？");
 
@@ -1718,7 +1727,7 @@ function showEvents() {
       if (event.category === "birthday") {
         btns = `<button class="ei-btn ei-btn-del" onclick="deleteSingleEvent(${index});event.stopPropagation();">削除</button>`;
       } else if (event.category === "class" || event._fromSchedule) {
-        btns = "";
+        btns = `<button class="ei-btn ei-btn-del" onclick="cancelClassEvent('${event.id}');event.stopPropagation();">🚫 休講にする</button>`;
       } else if (event.groupId) {
         btns = `<button class="ei-btn" onclick="showEditForm(${index});event.stopPropagation();">編集</button><button class="ei-btn ei-btn-del" onclick="deleteSingleEvent(${index});event.stopPropagation();">この日だけ削除</button><button class="ei-btn ei-btn-del" onclick="deleteFutureEvents(${index});event.stopPropagation();">以降を削除</button>`;
       } else {
@@ -1875,6 +1884,8 @@ function openTimetableEditor() {
 
 function saveTimetableEdit() {
   localStorage.setItem("classSchedule", JSON.stringify(obClassSchedule));
+  cancelledClasses.clear();
+  localStorage.setItem("cancelledClasses", "[]");
   obClassesToEvents();
   // 修正モード終了 → ボタンを元に戻す
   document.getElementById("ob-step2-onboard-btns").classList.remove("hidden");
@@ -5256,8 +5267,10 @@ function obClassesToEvents() {
           if (!skipDates.has(dateStr)) {
             if (!cls.biweekly || weekCount % 2 === 0) {
               const times = OB_PERIOD_TIMES[cls.period];
+              const schedId = `sched-${sem}-${quarter}-${cls.day}-${cls.period}-${dateStr}`;
+              if (!cancelledClasses.has(schedId)) {
               newEvents.push({
-                id: `sched-${sem}-${quarter}-${cls.day}-${cls.period}-${dateStr}`,
+                id: schedId,
                 title: cls.name,
                 date: dateStr,
                 startTime: times.start,
@@ -5268,6 +5281,7 @@ function obClassesToEvents() {
                 allDay: false,
                 _fromSchedule: true,
               });
+              }
             }
             weekCount++;
           }
