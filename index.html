@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <title>明治大学カレンダー</title>
+
+<link rel="stylesheet" href="style.css?v=43">
+  <link rel="manifest" href="manifest.json">
+
+  <meta name="theme-color" content="#ffffff">
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Meiji Calendar">
+</head>
+<body>
+
+<!-- サーバー同期ステータスバナー -->
+<div id="sync-banner" class="sync-banner hidden">
+  <span id="sync-banner-icon" class="sync-banner-icon">⏳</span>
+  <span id="sync-banner-msg">データを同期中...</span>
+  <button id="sync-retry-btn" class="sync-retry-btn hidden" onclick="retrySyncNow()">再試行</button>
+</div>
+
+<div class="calendar-top">
+<button class="month-nav-btn" onclick="changeMonthWithSlide('prev')">‹</button>
+
+  <div class="month-title-btn">
+    <button class="today-btn" onclick="goToToday()">今日</button>
+    <span id="current-month"></span>
+  </div>
+
+ <button class="month-nav-btn" onclick="changeMonthWithSlide('next')">›</button>
+</div>
+
+<!-- ── タブ: 月 ── -->
+<div id="tab-month" class="tab-pane">
+  <div id="month-scroll" class="month-scroll"></div>
+
+  <div class="quick-tools">
+    <button class="qt-search-trigger" onclick="openSearch()">
+      <span class="qt-search-icon">🔍</span>
+      <span class="qt-search-placeholder">予定・授業・ToDo・課題を検索</span>
+    </button>
+  </div>
+
+  <div class="cal-legend">
+    <span class="cl-dot cl-class">授業</span>
+    <span class="cl-dot cl-event">予定</span>
+    <span class="cl-dot cl-exec">実行日</span>
+    <span class="cl-dot cl-deadline">締切</span>
+    <span class="cl-dot cl-travel">移動</span>
+    <span class="cl-dot cl-habit">習慣</span>
+  </div>
+
+  <div id="weekdays">
+    <div>日</div>
+    <div>月</div>
+    <div>火</div>
+    <div>水</div>
+    <div>木</div>
+    <div>金</div>
+    <div>土</div>
+  </div>
+
+  <div id="calendar" class="calendar"></div>
+  <div id="today-panel" class="today-panel"></div>
+</div>
+
+<!-- ── タブ: 今日 ── -->
+<div id="tab-today" class="tab-pane hidden">
+  <div id="today-view" class="tv-scroll"></div>
+</div>
+
+<!-- ── タブ: ToDo ── -->
+<!-- ── タブ: ToDo ── -->
+<div id="tab-todo" class="tab-pane hidden">
+
+  <!-- ① 今日のサマリーバナー -->
+  <div id="todo-summary-banner" class="todo-summary-banner"></div>
+
+  <!-- ① 週の目標 & 達成度 -->
+  <div id="weekly-goals-section" class="weekly-goals-section">
+    <div class="wg-header" onclick="toggleWeeklyGoalsSection()">
+      <span class="wg-title">週の目標</span>
+      <span id="wg-progress-badge" class="wg-progress-badge"></span>
+      <span id="wg-toggle-arrow" class="wg-toggle-arrow">▼</span>
+    </div>
+    <div id="weekly-goals-body" class="weekly-goals-body"></div>
+  </div>
+
+  <!-- ② 自動スケジュール結果 -->
+  <div id="todo-tab-schedule-result" class="todo-tab-schedule-result hidden"></div>
+
+  <!-- ③ インライン追加・編集フォーム -->
+  <div id="todo-tab-add-form" class="todo-tab-add-form hidden">
+    <div class="ttaf-header">
+      <h3 class="ttaf-title" id="ttaf-title">ToDoを追加</h3>
+      <button class="ttaf-close" onclick="closeTodoInlineForm()">✕</button>
+    </div>
+
+    <!-- カテゴリ（6種類） -->
+    <div class="ttaf-cat-row">
+      <button class="tcat-btn tcat-active" id="ttaf-tcb-other"      onclick="setInlineFormCat('other')">その他</button>
+      <button class="tcat-btn"             id="ttaf-tcb-assignment"  onclick="setInlineFormCat('assignment')">📚 課題</button>
+      <button class="tcat-btn"             id="ttaf-tcb-study"       onclick="setInlineFormCat('study')">📖 勉強</button>
+      <button class="tcat-btn"             id="ttaf-tcb-event-prep"  onclick="setInlineFormCat('event-prep')">📋 準備</button>
+      <button class="tcat-btn"             id="ttaf-tcb-shopping"    onclick="setInlineFormCat('shopping')">🛒 買い物</button>
+      <button class="tcat-btn"             id="ttaf-tcb-contact"     onclick="setInlineFormCat('contact')">📞 連絡</button>
+    </div>
+    <input type="hidden" id="ttaf-category" value="other">
+
+    <div id="ttaf-subject-row" class="hidden">
+      <input id="ttaf-subject" type="text" list="ttaf-subject-datalist" placeholder="授業名（任意）" autocomplete="off">
+      <datalist id="ttaf-subject-datalist"></datalist>
+    </div>
+
+    <input id="ttaf-text" type="text" placeholder="やることを入力（必須）">
+
+    <div class="ttaf-row2">
+      <div class="ttaf-field">
+        <label>締切日 <span id="ttaf-deadline-req" class="form-optional">（任意）</span></label>
+        <input id="ttaf-deadline" type="date">
+      </div>
+      <div class="ttaf-field">
+        <label>実行日 <span class="form-optional">（任意）</span></label>
+        <input id="ttaf-execution-date" type="date">
+      </div>
+    </div>
+
+    <div class="ttaf-row3">
+      <div class="ttaf-field">
+        <label>所要時間</label>
+        <select id="ttaf-duration">
+          <option value="15">15分</option>
+          <option value="30">30分</option>
+          <option value="45">45分</option>
+          <option value="60">1時間</option>
+          <option value="90">1.5時間</option>
+          <option value="120">2時間</option>
+          <option value="180">3時間</option>
+          <option value="240">4時間</option>
+        </select>
+      </div>
+      <div class="ttaf-field">
+        <label>重さ</label>
+        <select id="ttaf-weight">
+          <option value="1">1 軽い</option>
+          <option value="2">2</option>
+          <option value="3">3 普通</option>
+          <option value="4">4</option>
+          <option value="5">5 重い</option>
+        </select>
+      </div>
+      <div class="ttaf-field">
+        <label>重要度</label>
+        <select id="ttaf-importance">
+          <option value="1">1 低い</option>
+          <option value="2">2</option>
+          <option value="3">3 普通</option>
+          <option value="4">4</option>
+          <option value="5">5 高い</option>
+        </select>
+      </div>
+    </div>
+
+    <textarea id="ttaf-memo" placeholder="メモ（任意）" rows="2"></textarea>
+
+    <div class="ttaf-btns">
+      <button class="ttaf-cancel" onclick="closeTodoInlineForm()">キャンセル</button>
+      <button class="ttaf-save" id="ttaf-save-btn" onclick="saveFromInlineForm()">追加</button>
+    </div>
+  </div>
+
+  <!-- ④ ビュー切り替え -->
+  <div class="tv-toolbar">
+    <div class="tv-view-toggle">
+      <button class="tvt-btn tvt-active" id="tvt-rec"      onclick="switchTodoView('recommended')">おすすめ順</button>
+      <button class="tvt-btn"            id="tvt-all"       onclick="switchTodoView('all')">グループ</button>
+      <button class="tvt-btn"            id="tvt-deadline"  onclick="switchTodoView('deadline')">締切順</button>
+      <button class="tvt-btn"            id="tvt-subject"   onclick="switchTodoView('subject')">授業別</button>
+    </div>
+  </div>
+
+  <!-- ⑤ リスト本体 -->
+  <div id="todo-tab-list" class="todo-tab-list-scroll"></div>
+
+  <!-- ⑥ 下部追加ボタン（FAB） -->
+  <div class="tv-add-fab">
+    <button class="tv-add-btn" onclick="openTodoInlineForm()">＋ ToDoを追加</button>
+  </div>
+
+</div>
+
+<!-- ── ボトムナビ ── -->
+<nav class="bottom-nav">
+  <button class="bnav-btn active" id="bnav-month" onclick="switchTab('month')">
+    <span class="bnav-icon">📅</span>
+    <span class="bnav-label">月</span>
+  </button>
+  <button class="bnav-btn" id="bnav-today" onclick="switchTab('today')">
+    <span class="bnav-icon">☀️</span>
+    <span class="bnav-label">今日</span>
+  </button>
+  <button class="bnav-btn" id="bnav-todo" onclick="switchTab('todo')">
+    <span class="bnav-icon">✅</span>
+    <span class="bnav-label">ToDo<span id="bnav-todo-badge" class="bnav-badge hidden"></span></span>
+  </button>
+</nav>
+
+  <!-- 時間割追加ポップアップ -->
+  <div id="timetable-modal" class="modal hidden" onclick="closeTimetableModalByOutside(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="settings">
+        <h2>時間割を追加</h2>
+
+        <input id="timetable-search" type="search" placeholder="授業名・教員名・科目番号で検索" oninput="showTimetableCandidates()">
+
+        <div class="timetable-filter-row">
+        <select id="faculty" onchange="showTimetableCandidates()">
+          <option value="">学部を選択</option>
+          <option value="総合数理学部">総合数理学部</option>
+          <option value="国際日本学部">国際日本学部</option>
+          <option value="商学部">商学部</option>
+          <option value="政治経済学部">政治経済学部</option>
+          <option value="理工学部">理工学部</option>
+          <option value="情報コミュニケーション学部">情報コミュニケーション学部</option>
+        </select>
+
+        <select id="semester" onchange="showTimetableCandidates()">
+          <option value="">学期を選択</option>
+          <option value="春">春</option>
+          <option value="秋">秋</option>
+          <option value="通年">通年</option>
+        </select>
+
+        <select id="weekday-filter" onchange="showTimetableCandidates()">
+          <option value="">曜日を選択</option>
+          <option value="月">月曜</option>
+          <option value="火">火曜</option>
+          <option value="水">水曜</option>
+          <option value="木">木曜</option>
+          <option value="金">金曜</option>
+          <option value="土">土曜</option>
+        </select>
+        </div>
+
+    <p>授業前の移動時間</p>
+<select id="class-travel-minutes">
+  <option value="0">移動時間を追加しない</option>
+  <option value="10">10分</option>
+  <option value="15">15分</option>
+  <option value="20">20分</option>
+  <option value="30">30分</option>
+  <option value="40">40分</option>
+  <option value="45">45分</option>
+  <option value="50">50分</option>
+  <option value="60">1時間</option>
+  <option value="75">1時間15分</option>
+  <option value="90">1時間30分</option>
+</select>
+
+<div id="timetable-candidates"></div>
+
+<div class="timetable-footer">
+  <button onclick="addSelectedTimetable()">選択した授業を時間割に追加</button>
+  <button onclick="closeTimetableModal()">閉じる</button>
+</div>
+      </div>
+    </div>
+  </div>
+
+ <!-- 予定追加・編集ポップアップ -->
+<div id="modal" class="modal hidden" onclick="closeModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 id="modal-date"></h2>
+
+    <div id="view-area">
+      <h3>この日の予定</h3>
+      <div id="event-list"></div>
+      <button class="plus-button" onclick="showAddForm()">＋ 予定を追加</button>
+
+      <div class="popup-section-divider"></div>
+      <div class="popup-section-title">この日のToDo</div>
+      <div id="popup-todo-list"></div>
+      <div id="popup-todo-form" class="hidden">
+        <input id="popup-todo-input" class="popup-todo-input" type="text" placeholder="やることを入力">
+        <div class="popup-todo-form-btns">
+          <button class="popup-todo-cancel" onclick="document.getElementById('popup-todo-form').classList.add('hidden')">キャンセル</button>
+          <button class="popup-todo-submit" onclick="addPopupTodo()">追加</button>
+        </div>
+      </div>
+      <button class="plus-button plus-todo-btn" onclick="showPopupTodoForm()">＋ ToDoを追加</button>
+    </div>
+
+    <div id="form-area" class="hidden">
+      <h3 id="form-title">予定を追加</h3>
+
+      <input id="title" type="text" placeholder="予定タイトル">
+
+      <!-- ここを追加 -->
+      <label class="all-day-row">
+        <input id="all-day" type="checkbox" onchange="toggleAllDayInputs()">
+        終日
+      </label>
+
+      <!-- 時間入力をまとめる -->
+      <div id="time-input-area">
+        <p>開始時間</p>
+        <div class="time-row">
+          <select id="start-hour"></select>
+          <span>時</span>
+          <select id="start-minute"></select>
+          <span>分</span>
+        </div>
+
+        <p>終了時間</p>
+        <div class="time-row">
+          <select id="end-hour"></select>
+          <span>時</span>
+          <select id="end-minute"></select>
+          <span>分</span>
+        </div>
+      </div>
+
+
+        <textarea id="detail" placeholder="予定の詳細"></textarea>
+     <div class="move-section">
+
+  <label class="move-check-row">
+    <input id="has-travel" type="checkbox" onchange="toggleTravelInputs()">
+    <span>移動時間を追加する</span>
+  </label>
+
+  <div id="travel-inputs" class="hidden">
+    <input id="travel-from" type="text" placeholder="出発地 例：自宅">
+    <input id="travel-to" type="text" placeholder="目的地 例：明治大学中野キャンパス">
+
+    <p>移動時間</p>
+    <select id="travel-minutes">
+      <option value="10">10分</option>
+      <option value="15">15分</option>
+      <option value="20">20分</option>
+      <option value="30">30分</option>
+      <option value="40">40分</option>
+      <option value="45">45分</option>
+      <option value="50">50分</option>
+      <option value="60">1時間</option>
+      <option value="75">1時間15分</option>
+      <option value="90">1時間30分</option>
+    </select>
+  </div>
+</div>
+  
+
+        <p>予定の種類</p>
+        <select id="event-category">
+          <option value="normal">普通の予定</option>
+          <option value="seminar">ゼミ</option>
+          <option value="class">授業</option>
+        </select>
+
+        <p>カラー</p>
+        <div class="color-picker-row" id="color-picker">
+          <button type="button" class="color-swatch selected" data-color="#3b82f6" style="background:#3b82f6" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#ef4444" style="background:#ef4444" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#f97316" style="background:#f97316" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#eab308" style="background:#eab308" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#22c55e" style="background:#22c55e" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#a855f7" style="background:#a855f7" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#ec4899" style="background:#ec4899" onclick="selectEventColor(this)"></button>
+          <button type="button" class="color-swatch" data-color="#6b7280" style="background:#6b7280" onclick="selectEventColor(this)"></button>
+        </div>
+        <input type="hidden" id="event-color" value="#3b82f6">
+
+        <label class="notify-row">
+          <input id="notify-enabled" type="checkbox" onchange="toggleNotifyInputs()">
+          通知する
+        </label>
+        <div id="notify-inputs" class="hidden">
+          <select id="notify-minutes">
+            <option value="5">5分前</option>
+            <option value="10">10分前</option>
+            <option value="15">15分前</option>
+            <option value="30">30分前</option>
+            <option value="60">1時間前</option>
+            <option value="1440">前日</option>
+          </select>
+        </div>
+
+        <label class="multi-day-row">
+          <input id="multi-day" type="checkbox" onchange="toggleMultiDayInputs()">
+          複数日程を一気に登録する
+        </label>
+        <div id="multi-day-inputs" class="hidden">
+          <p>終了日</p>
+          <input id="multi-end-date" type="date">
+          <p class="form-hint">選択した日から終了日まで、同じ予定を毎日追加します。</p>
+        </div>
+
+        <select id="repeat">
+          <option value="none">繰り返さない</option>
+          <option value="weekly">毎週</option>
+          <option value="biweekly">隔週</option>
+        </select>
+
+        <select id="repeat-weeks">
+          <option value="0">繰り返し期間なし</option>
+          <option value="1">1週間</option>
+          <option value="2">2週間</option>
+          <option value="4">4週間</option>
+          <option value="8">8週間</option>
+          <option value="12">12週間</option>
+          <option value="16">16週間</option>
+          <option value="24">24週間</option>
+          <option value="52">1年間</option>
+        </select>
+
+        <button onclick="saveEvent()">保存</button>
+        <button onclick="showViewArea()">戻る</button>
+      </div>
+    </div>
+  </div>
+<!-- プラスメニューの背景影 -->
+<div
+  id="floating-backdrop"
+  class="floating-backdrop hidden"
+  onclick="closeFloatingMenu()"
+></div>
+<!-- 右下のプラスメニュー -->
+<div class="floating-menu">
+  <div id="floating-options" class="floating-options hidden">
+
+    <!-- その他（上・親指から遠い） -->
+    <div class="fo-sub">
+      <div class="fo-sub-label">その他</div>
+      <button class="fo-sub-btn" onclick="openBirthdayModal()">🎂 誕生日を追加</button>
+      <button class="fo-sub-btn" onclick="openShareModal()">🔗 共有/バックアップ</button>
+      <button class="fo-sub-btn" id="account-menu-btn" onclick="openAccountModal()">👤 アカウント</button>
+    </div>
+
+    <div class="fo-divider"></div>
+
+    <!-- メイン操作（下・親指に近い） -->
+    <button class="fo-btn" onclick="openHabitFromPlus()">🔄 習慣を追加</button>
+    <button class="fo-btn" onclick="openTimetableModalFromPlus()">📚 授業を追加</button>
+    <button class="fo-btn" onclick="openTodoFromPlus()">✅ ToDo を追加</button>
+    <button class="fo-btn fo-btn-primary" onclick="openAddEventForToday()">📅 予定を追加</button>
+
+  </div>
+
+  <button id="floating-plus" class="floating-plus" onclick="toggleFloatingMenu()">＋<span id="todo-badge" class="todo-badge hidden"></span></button>
+</div>
+
+<!-- ToDo クイック追加モーダル（下バーからToDoタブへ誘導、+ メニューから呼び出し） -->
+<div id="todo-modal" class="modal hidden" onclick="closeTodoModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>ToDoを追加</h2>
+
+    <div class="todo-cat-toggle">
+      <button class="tcb tcb-active" id="tcb-todo"       onclick="setTodoCat('todo')">📝 ToDo</button>
+      <button class="tcb"            id="tcb-assignment"  onclick="setTodoCat('assignment')">📚 課題</button>
+      <button class="tcb"            id="tcb-study"       onclick="setTodoCat('study')">📖 勉強</button>
+      <button class="tcb"            id="tcb-event-prep"  onclick="setTodoCat('event-prep')">📋 準備</button>
+    </div>
+    <input type="hidden" id="todo-category" value="todo">
+
+    <div id="todo-subject-row" class="hidden">
+      <p>授業名 <span class="form-optional">（任意）</span></p>
+      <input id="todo-subject" type="text" list="subject-datalist" placeholder="例：情報処理論" autocomplete="off">
+      <datalist id="subject-datalist"></datalist>
+    </div>
+
+    <input id="todo-input" type="text" placeholder="やることを入力（必須）">
+
+    <p>締切日 <span id="todo-deadline-req" class="form-optional">（任意）</span></p>
+    <input id="todo-deadline" type="date">
+
+    <p>実行日 <span class="form-optional">（いつやるか・任意）</span></p>
+    <input id="todo-execution-date" type="date">
+
+    <p>所要時間</p>
+    <select id="todo-duration">
+      <option value="15">15分</option>
+      <option value="30">30分</option>
+      <option value="60">1時間</option>
+      <option value="90">1時間30分</option>
+      <option value="120">2時間</option>
+      <option value="180">3時間</option>
+    </select>
+
+    <p>重さ</p>
+    <select id="todo-weight">
+      <option value="1">1：軽い</option>
+      <option value="2">2：やや軽い</option>
+      <option value="3">3：普通</option>
+      <option value="4">4：重い</option>
+      <option value="5">5：かなり重い</option>
+    </select>
+
+    <p>重要度</p>
+    <select id="todo-importance">
+      <option value="1">1：低い</option>
+      <option value="2">2：やや低い</option>
+      <option value="3">3：普通</option>
+      <option value="4">4：高い</option>
+      <option value="5">5：かなり高い</option>
+    </select>
+
+    <button onclick="addTodo()">追加してToDoタブで確認</button>
+    <button onclick="closeTodoModal()">閉じる</button>
+  </div>
+</div>
+<!-- 習慣リストモーダル -->
+<div id="habit-list-modal" class="modal hidden" onclick="closeHabitListModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="habit-modal-header">
+      <h2>習慣</h2>
+      <button class="habit-header-add-btn" onclick="openHabitFormModal()">＋ 追加</button>
+    </div>
+    <div id="habit-modal-body"></div>
+    <button onclick="closeHabitListModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- 習慣追加・編集モーダル -->
+<div id="habit-form-modal" class="modal hidden" onclick="closeHabitFormModalByOutside(event)" data-freq="daily">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2 id="habit-form-title">習慣を追加</h2>
+    <input type="hidden" id="habit-edit-id" value="">
+
+    <input id="habit-name-input" type="text" placeholder="習慣名（例：筋トレ、読書）">
+
+    <p>所要時間</p>
+    <select id="habit-duration-input">
+      <option value="10">10分</option>
+      <option value="15">15分</option>
+      <option value="20">20分</option>
+      <option value="30" selected>30分</option>
+      <option value="45">45分</option>
+      <option value="60">1時間</option>
+      <option value="90">1時間30分</option>
+      <option value="120">2時間</option>
+    </select>
+
+    <p>頻度</p>
+    <div class="habit-freq-btns">
+      <button class="hfb hfb-active" id="hfb-daily"   onclick="setHabitFreq('daily')">毎日</button>
+      <button class="hfb"            id="hfb-weekday"  onclick="setHabitFreq('weekday')">平日</button>
+      <button class="hfb"            id="hfb-weekend"  onclick="setHabitFreq('weekend')">週末</button>
+      <button class="hfb"            id="hfb-weekly"   onclick="setHabitFreq('weekly')">週N回</button>
+      <button class="hfb"            id="hfb-custom"   onclick="setHabitFreq('custom')">カスタム</button>
+    </div>
+
+    <div id="habit-weekly-input" class="hidden">
+      <p>週に何回</p>
+      <select id="habit-weekly-target">
+        <option value="1">1回</option>
+        <option value="2">2回</option>
+        <option value="3" selected>3回</option>
+        <option value="4">4回</option>
+        <option value="5">5回</option>
+        <option value="6">6回</option>
+      </select>
+    </div>
+
+    <div id="habit-custom-days" class="hidden">
+      <p>実施する曜日</p>
+      <div class="habit-day-btns">
+        <button class="hdb" id="hdb-0" onclick="toggleHabitDay(0)">日</button>
+        <button class="hdb" id="hdb-1" onclick="toggleHabitDay(1)">月</button>
+        <button class="hdb" id="hdb-2" onclick="toggleHabitDay(2)">火</button>
+        <button class="hdb" id="hdb-3" onclick="toggleHabitDay(3)">水</button>
+        <button class="hdb" id="hdb-4" onclick="toggleHabitDay(4)">木</button>
+        <button class="hdb" id="hdb-5" onclick="toggleHabitDay(5)">金</button>
+        <button class="hdb" id="hdb-6" onclick="toggleHabitDay(6)">土</button>
+      </div>
+    </div>
+
+    <p>時間帯 <span class="form-optional">（任意）</span></p>
+    <input id="habit-time-input" type="time">
+
+    <label class="notify-row">
+      <input id="habit-notify-input" type="checkbox">
+      通知する
+    </label>
+
+    <p>メモ <span class="form-optional">（任意）</span></p>
+    <textarea id="habit-memo-input" placeholder="メモ" rows="2"></textarea>
+
+    <button onclick="saveHabitFromForm()">保存</button>
+    <button onclick="closeHabitFormModal()">キャンセル</button>
+  </div>
+</div>
+
+ <!-- 誕生日ポップアップ -->
+<div id="birthday-modal" class="modal hidden" onclick="closeBirthdayModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>誕生日を追加</h2>
+
+    <input id="birthday-name" type="text" placeholder="名前">
+
+    <p>誕生日</p>
+    <div class="time-row">
+      <select id="birthday-month"></select>
+      <span>月</span>
+      <select id="birthday-day"></select>
+      <span>日</span>
+    </div>
+
+    <button onclick="saveBirthday()">保存</button>
+    <button onclick="closeBirthdayModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- 電車・通知ポップアップ -->
+<div id="commute-modal" class="modal hidden" onclick="closeCommuteModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>電車・通知</h2>
+
+    <p>普段の移動時間</p>
+    <select id="default-commute-minutes">
+      <option value="0">未設定</option>
+      <option value="30">30分</option>
+      <option value="45">45分</option>
+      <option value="60">1時間</option>
+      <option value="75">1時間15分</option>
+      <option value="90">1時間30分</option>
+    </select>
+
+    <p>手動遅延入力（出発目安に反映）</p>
+    <select id="delay-minutes">
+      <option value="0">遅延なし</option>
+      <option value="5">5分遅延</option>
+      <option value="10">10分遅延</option>
+      <option value="15">15分遅延</option>
+      <option value="30">30分遅延</option>
+    </select>
+
+    <button onclick="saveCommuteSettings()">保存</button>
+    <button onclick="requestNotificationPermission()">🔔 授業通知を有効にする</button>
+
+    <hr style="margin:14px 0; border-color:#f3f4f6;">
+    <p><strong>📌 ToDo・課題通知</strong></p>
+    <p class="form-hint">通知許可後に有効になります</p>
+    <div class="notif-toggle-list">
+      <label class="notif-toggle-row">
+        <input type="checkbox" id="notif-todo-today" onchange="saveTodoNotifSettings()">
+        <span>今日締切のToDo <small>（朝8時）</small></span>
+      </label>
+      <label class="notif-toggle-row">
+        <input type="checkbox" id="notif-todo-overdue" onchange="saveTodoNotifSettings()">
+        <span>期限切れToDo <small>（朝8時）</small></span>
+      </label>
+      <label class="notif-toggle-row">
+        <input type="checkbox" id="notif-todo-exec" onchange="saveTodoNotifSettings()">
+        <span>今日が実行日のToDo <small>（朝8時）</small></span>
+      </label>
+      <label class="notif-toggle-row">
+        <input type="checkbox" id="notif-assign-eve" onchange="saveTodoNotifSettings()">
+        <span>課題の締切前日 <small>（夜21時）</small></span>
+      </label>
+    </div>
+
+    <button onclick="closeCommuteModal()">閉じる</button>
+
+    <div id="commute-advice" class="commute-advice"></div>
+
+    <hr style="margin:14px 0; border-color:#e5e7eb;">
+    <p style="font-weight:700; margin-bottom:6px;">🚃 リアルタイム遅延情報</p>
+    <button onclick="fetchTrainDelays()">遅延情報を取得</button>
+    <div id="delay-result"></div>
+  </div>
+</div>
+
+<!-- 共有・バックアップポップアップ -->
+<div id="share-modal" class="modal hidden" onclick="closeShareModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>共有/バックアップ</h2>
+
+    <!-- アカウント共有（ログイン時のみ表示） -->
+    <div id="account-share-section" class="hidden">
+      <p class="share-section-title">👥 友達と予定を共有</p>
+      <p class="form-hint">相手のユーザー名を入力すると、自分の予定が相手のカレンダーに表示されます。</p>
+      <div class="share-invite-row">
+        <input id="share-invite-username" type="text" placeholder="相手のユーザー名">
+        <button onclick="inviteShare()">招待する</button>
+      </div>
+      <div id="share-invites-list"></div>
+      <div id="share-friends-list"></div>
+      <hr class="share-section-divider">
+    </div>
+
+    <p class="share-section-title">💾 データのバックアップ</p>
+    <p class="form-hint">下の文字を相手に送ると、予定を取り込めます。</p>
+    <button onclick="exportShareData()">共有データを作る</button>
+    <textarea id="share-text" placeholder="ここに共有データが表示されます。取り込む場合はここに貼り付けてください。"></textarea>
+    <button onclick="importShareData()">貼り付けたデータを取り込む</button>
+    <button onclick="closeShareModal()">閉じる</button>
+  </div>
+</div>
+
+
+<!-- アカウントポップアップ -->
+<div id="account-modal" class="modal hidden" onclick="closeAccountModalByOutside(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <h2>アカウント</h2>
+
+    <!-- ログイン済み表示 -->
+    <div id="account-loggedin" class="hidden">
+      <p id="account-user-label" class="account-user-label"></p>
+      <p class="form-hint">ログイン中は予定・ToDoが自動でサーバーに保存されます。<br>別の端末でログインすると同じデータが表示されます。</p>
+      <button onclick="pullFromServer()">サーバーから最新データを取得</button>
+      <button class="account-logout-btn" onclick="doLogout()">ログアウト</button>
+      <hr style="margin:14px 0; border-color:#f3f4f6;">
+      <button class="account-delete-btn" onclick="deleteAccount()">アカウントを削除</button>
+    </div>
+
+    <!-- 未ログイン表示 -->
+    <div id="account-loggedout">
+      <div class="account-tab-row">
+        <button id="tab-login" class="account-tab active" onclick="switchAuthTab('login')">ログイン</button>
+        <button id="tab-register" class="account-tab" onclick="switchAuthTab('register')">新規登録</button>
+      </div>
+      <input id="account-username" type="text" placeholder="ユーザー名" autocomplete="username">
+      <input id="account-password" type="password" placeholder="パスワード（4文字以上）" autocomplete="current-password">
+      <input id="account-password-confirm" type="password" placeholder="パスワード（確認）" autocomplete="new-password" class="hidden">
+      <div id="account-error" class="account-error"></div>
+      <button id="account-submit-btn" onclick="submitAuth()">ログイン</button>
+    </div>
+
+    <button onclick="closeAccountModal()">閉じる</button>
+  </div>
+</div>
+
+<!-- ── 検索オーバーレイ ── -->
+<div id="search-overlay" class="search-overlay hidden" onclick="closeSearchByOutside(event)">
+  <div class="search-panel" onclick="event.stopPropagation()">
+    <div class="search-header">
+      <input id="search-input-main" type="search" class="search-main-input"
+             placeholder="予定・授業・ToDo・課題を検索..."
+             oninput="searchAllItems()" autocomplete="off">
+      <button class="search-close-btn" onclick="closeSearch()" aria-label="閉じる">✕</button>
+    </div>
+    <div class="search-filter-bar" id="search-filter-bar">
+      <button class="sf-btn sf-active" id="sf-all"    onclick="setSearchFilter('all')">全て</button>
+      <button class="sf-btn"           id="sf-event"  onclick="setSearchFilter('event')">📅 予定</button>
+      <button class="sf-btn"           id="sf-class"  onclick="setSearchFilter('class')">🎓 授業</button>
+      <button class="sf-btn"           id="sf-todo"   onclick="setSearchFilter('todo')">📌 ToDo</button>
+      <button class="sf-btn"           id="sf-assign" onclick="setSearchFilter('assign')">📚 課題</button>
+      <button class="sf-btn"           id="sf-done"   onclick="setSearchFilter('done')">✓ 完了</button>
+    </div>
+    <div id="search-results-main" class="search-results-panel"></div>
+  </div>
+</div>
+
+<!-- 分割配置モーダル -->
+<div id="split-modal" class="modal hidden" onclick="closeSplitModalByOutside(event)">
+  <div class="modal-content split-modal-content" onclick="event.stopPropagation()">
+    <h2>✂ 課題を分割して配置</h2>
+    <div id="split-todo-name" class="split-todo-name"></div>
+    <div class="split-info-row">
+      <span class="split-info-label">合計</span>
+      <span id="split-total-time" class="split-info-val"></span>
+      <span class="split-info-sep">|</span>
+      <span class="split-info-label">締切</span>
+      <span id="split-deadline" class="split-info-val"></span>
+    </div>
+    <p class="split-unit-label">分割単位</p>
+    <div class="split-unit-btns">
+      <button class="split-unit-btn" id="su-30" onclick="setSplitUnit(30)">30分</button>
+      <button class="split-unit-btn" id="su-60" onclick="setSplitUnit(60)">60分</button>
+      <button class="split-unit-btn" id="su-90" onclick="setSplitUnit(90)">90分</button>
+    </div>
+    <div id="split-preview-area" class="split-preview-area"></div>
+    <div class="split-modal-btns">
+      <button class="split-cancel-btn" onclick="closeSplitModal()">キャンセル</button>
+      <button class="split-apply-btn" id="split-apply-btn" onclick="applySplitSchedule()">カレンダーに追加</button>
+    </div>
+  </div>
+</div>
+
+ <script src="script.js?v=43"></script>
+
+<!-- ─── オンボーディング ─────────────────────────────────── -->
+<div id="onboarding-overlay" class="hidden">
+  <div class="ob-card">
+
+    <!-- ステップインジケーター -->
+    <div class="ob-progress">
+      <div class="ob-dot active" id="ob-dot-1">1</div>
+      <div class="ob-line"></div>
+      <div class="ob-dot" id="ob-dot-2">2</div>
+      <div class="ob-line"></div>
+      <div class="ob-dot" id="ob-dot-3">3</div>
+      <div class="ob-line"></div>
+      <div class="ob-dot" id="ob-dot-4">4</div>
+    </div>
+
+    <!-- Step 1: アカウント作成 -->
+    <div id="ob-step-1" class="ob-step">
+      <h2 class="ob-title">アカウントを作成</h2>
+      <p class="ob-desc">どの端末からでも予定を確認できるようになります</p>
+      <input type="text" id="ob-username" class="ob-input" placeholder="ユーザー名（2文字以上）" autocomplete="username">
+      <input type="password" id="ob-password" class="ob-input" placeholder="パスワード（4文字以上）" autocomplete="new-password" oninput="obCheckPasswordMatch()">
+      <input type="password" id="ob-password-confirm" class="ob-input" placeholder="パスワード（確認用）" autocomplete="new-password" oninput="obCheckPasswordMatch()">
+      <p id="ob-pw-match" class="ob-pw-match"></p>
+      <p id="ob-err-1" class="ob-error"></p>
+      <button class="ob-btn-primary" onclick="obStep1()">次へ</button>
+      <p class="ob-sub"><a href="#" onclick="obShowLogin(event)">すでにアカウントをお持ちの方はこちら</a></p>
+    </div>
+
+    <!-- Step 1b: ログイン（既存ユーザー用） -->
+    <div id="ob-step-1b" class="ob-step hidden">
+      <h2 class="ob-title">ログイン</h2>
+      <p class="ob-desc">既存のアカウントでログインしてください</p>
+      <input type="text" id="ob-login-username" class="ob-input" placeholder="ユーザー名" autocomplete="username">
+      <input type="password" id="ob-login-password" class="ob-input" placeholder="パスワード" autocomplete="current-password">
+      <p id="ob-err-1b" class="ob-error"></p>
+      <button class="ob-btn-primary" onclick="obStep1bLogin()">ログイン</button>
+      <p class="ob-sub"><a href="#" onclick="obShowRegister(event)">新規登録に戻る</a></p>
+    </div>
+
+    <!-- Step 2: 時間割 -->
+    <div id="ob-step-2" class="ob-step hidden">
+      <h2 class="ob-title">時間割を登録</h2>
+      <select id="ob-faculty" class="ob-select">
+        <option value="">学部を選択（任意）</option>
+        <option>法学部</option>
+        <option>商学部</option>
+        <option>政治経済学部</option>
+        <option>文学部</option>
+        <option>理工学部</option>
+        <option>農学部</option>
+        <option>経営学部</option>
+        <option>情報コミュニケーション学部</option>
+        <option>国際日本学部</option>
+        <option>総合数理学部</option>
+      </select>
+      <div class="ob-semester-tabs">
+        <button id="ob-tab-zenki" class="ob-semester-tab active" onclick="obSetSemester('zenki')">前期</button>
+        <button id="ob-tab-kouki" class="ob-semester-tab" onclick="obSetSemester('kouki')">後期</button>
+      </div>
+      <p class="ob-desc-sm">セルをタップして授業を登録（上段=前半・下段=後半）</p>
+      <div id="ob-timetable-wrap"></div>
+      <div id="ob-class-form" class="ob-class-form hidden">
+        <div id="ob-quarter-radios" class="ob-quarter-radios"></div>
+        <input type="search" id="ob-cls-search" class="ob-input" placeholder="授業名・教員名で検索" oninput="obFilterCandidates()" autocomplete="off">
+        <div id="ob-cls-candidates" class="ob-cls-candidates"></div>
+        <input type="text" id="ob-cls-name" class="ob-input" placeholder="科目名（必須）">
+        <input type="text" id="ob-cls-room" class="ob-input" placeholder="教室（任意）">
+        <input type="text" id="ob-cls-teacher" class="ob-input" placeholder="担当教員（任意）">
+        <div class="ob-form-btns">
+          <button class="ob-btn-skip" onclick="obCancelClass()">キャンセル</button>
+          <button class="ob-btn-danger" id="ob-delete-btn" onclick="obDeleteClass()">削除</button>
+          <button class="ob-btn-primary ob-inline-btn" onclick="obSaveClass()">登録</button>
+        </div>
+      </div>
+      <div class="ob-bottom-btns">
+        <button class="ob-btn-back" onclick="obSetStep('1')">← 戻る</button>
+        <button class="ob-btn-skip" onclick="obSkipStep2()">スキップ</button>
+        <button class="ob-btn-primary ob-inline-btn" onclick="obStep2Next()">次へ</button>
+      </div>
+    </div>
+
+    <!-- Step 3: 通知 -->
+    <div id="ob-step-3" class="ob-step hidden">
+      <div class="ob-icon">🔔</div>
+      <h2 class="ob-title">通知の設定</h2>
+      <p class="ob-desc">予定の30分前に通知を受け取りますか？<br>アプリを閉じていても届きます。</p>
+      <button class="ob-btn-primary" onclick="obEnableNotif()">通知を許可する</button>
+      <button class="ob-btn-skip" style="display:block;width:100%;text-align:center" onclick="obSkipNotif()">後で設定する</button>
+      <button class="ob-btn-back" style="display:block;width:100%;text-align:center;margin-top:8px" onclick="obSetStep(2)">← 戻る</button>
+    </div>
+
+    <!-- Step 4: 完了 -->
+    <div id="ob-step-4" class="ob-step hidden">
+      <div class="ob-icon">🎉</div>
+      <h2 class="ob-title">準備完了！</h2>
+      <p class="ob-desc">明治大学カレンダーへようこそ。<br>授業・予定を管理しましょう。</p>
+      <button class="ob-btn-primary" onclick="obFinish()">アプリを使う</button>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
