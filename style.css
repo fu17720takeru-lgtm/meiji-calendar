@@ -2157,12 +2157,18 @@ mark.sr-hl { background: #fef08a; color: inherit; border-radius: 2px; }
 }
 
 /* Quarter radio */
-.ob-quarter-radios { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.ob-quarter-radios { display: flex; gap: 6px; margin-bottom: 12px; }
 .ob-quarter-label {
-  display: flex; align-items: center; gap: 4px;
+  flex: 1;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
   font-size: 13px; color: #374151; cursor: pointer;
-  padding: 5px 8px; border: 1px solid #d1d5db;
-  border-radius: 6px; background: #f9fafb;
+  padding: 8px 4px; border: 1.5px solid #d1d5db;
+  border-radius: 8px; background: #f9fafb;
+  white-space: nowrap; text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ob-quarter-label:has(input:checked) {
+  border-color: #2563eb; background: #eff6ff; color: #1d4ed8; font-weight: 600;
 }
 .ob-quarter-label input[type="radio"] { accent-color: #2563eb; }
 

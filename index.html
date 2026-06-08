@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=1.4.2">
+<link rel="stylesheet" href="style.css?v=1.4.3">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -769,7 +769,7 @@
   </div>
 </div>
 
- <script src="script.js?v=1.4.2"></script>
+ <script src="script.js?v=1.4.3"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {
@@ -845,9 +845,8 @@
       <div id="ob-timetable-wrap"></div>
       <div id="ob-class-form" class="ob-class-form hidden">
         <div id="ob-quarter-radios" class="ob-quarter-radios"></div>
-        <input type="search" id="ob-cls-search" class="ob-input" placeholder="授業名・教員名で検索" oninput="obFilterCandidates()" autocomplete="off">
+        <input type="search" id="ob-cls-name" class="ob-input" placeholder="科目名を入力または検索" oninput="obFilterCandidates()" autocomplete="off">
         <div id="ob-cls-candidates" class="ob-cls-candidates"></div>
-        <input type="text" id="ob-cls-name" class="ob-input" placeholder="科目名（必須）">
         <input type="text" id="ob-cls-room" class="ob-input" placeholder="教室（任意）">
         <input type="text" id="ob-cls-teacher" class="ob-input" placeholder="担当教員（任意）">
         <div class="ob-form-btns">

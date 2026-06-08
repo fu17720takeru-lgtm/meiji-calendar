@@ -5033,7 +5033,7 @@ function obCellClick(day, period, half) {
   const cls = sched.find(c => c.day === day && c.period === period && c.quarter === quarter);
   obEditingCell = { day, period, quarter };
   obUpdateQuarterRadios(quarter);
-  document.getElementById("ob-cls-search").value = "";
+  document.getElementById("ob-cls-name").value = "";
   document.getElementById("ob-cls-name").value = cls?.name || "";
   document.getElementById("ob-cls-room").value = cls?.room || "";
   document.getElementById("ob-cls-teacher").value = cls?.teacher || "";
@@ -5044,12 +5044,12 @@ function obCellClick(day, period, half) {
   document.getElementById("ob-delete-btn").classList.toggle("hidden", !cls);
   document.getElementById("ob-class-form").classList.remove("hidden");
   obFilterCandidates();
-  document.getElementById("ob-cls-search").focus();
+  document.getElementById("ob-cls-name").focus();
 }
 
 function obFilterCandidates() {
   const { day, period } = obEditingCell || {};
-  const keyword = (document.getElementById("ob-cls-search")?.value || "").trim().toLowerCase();
+  const keyword = (document.getElementById("ob-cls-name")?.value || "").trim().toLowerCase();
   const faculty = document.getElementById("ob-faculty")?.value || "";
   const dayName = OB_DAY_NAMES[day];
   const area = document.getElementById("ob-cls-candidates");
@@ -5091,7 +5091,6 @@ function obFilterCandidates() {
       document.getElementById("ob-cls-name").value = item.title;
       document.getElementById("ob-cls-room").value = item.room || "";
       document.getElementById("ob-cls-teacher").value = item.teacher || "";
-      document.getElementById("ob-cls-search").value = item.title;
       area.innerHTML = "";
       const quarter = semToQuarter[item.semester] || "full";
       if (obEditingCell) {
