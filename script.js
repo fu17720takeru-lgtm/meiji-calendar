@@ -4890,10 +4890,10 @@ async function loadSharedEvents() {
 const OB_PERIOD_TIMES = {
   1: { start: "09:00", end: "10:40" },
   2: { start: "10:50", end: "12:30" },
-  3: { start: "13:20", end: "15:00" },
-  4: { start: "15:10", end: "16:50" },
-  5: { start: "17:00", end: "18:40" },
-  6: { start: "18:50", end: "20:30" },
+  3: { start: "13:30", end: "15:10" },
+  4: { start: "15:20", end: "17:00" },
+  5: { start: "17:10", end: "18:50" },
+  6: { start: "19:00", end: "20:40" },
 };
 
 let obClassSchedule = { zenki: [], kouki: [] };
