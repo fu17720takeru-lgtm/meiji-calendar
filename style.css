@@ -3184,6 +3184,7 @@ body.sync-visible {
 .tg-hdr-icon  { font-size: 14px; }
 .tg-hdr-label { flex: 1; }
 
+.tg-hdr-subject { color: #1f2937; border-bottom-color: #f59e0b; font-size: 13px; }
 .tg-hdr-overdue { color: #b91c1c; border-bottom-color: #fca5a5; }
 .tg-hdr-today   { color: #1d4ed8; border-bottom-color: #93c5fd; }
 .tg-hdr-exec    { color: #0f766e; border-bottom-color: #5eead4; }

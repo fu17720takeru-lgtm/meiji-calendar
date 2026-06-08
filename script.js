@@ -2504,9 +2504,10 @@ function renderTodoTabSubjectView() {
     const isRegistered = subj && registered.includes(subj);
 
     const hdr = document.createElement("div");
-    hdr.className = "subj-header" + (isRegistered ? " subj-header-registered" : "");
+    hdr.className = "tg-section-hdr tg-hdr-subject";
     hdr.innerHTML = `
-      <span class="subj-name">${subj ? escapeHtml(subj) : "授業未設定"}</span>
+      <span class="tg-hdr-icon">📚</span>
+      <span class="tg-hdr-label">${subj ? escapeHtml(subj) : "授業未設定"}</span>
       ${isRegistered ? '<span class="subj-registered-dot"></span>' : ""}
       <span class="tg-count">${items.length}</span>
     `;
@@ -2520,8 +2521,8 @@ function renderTodoTabSubjectView() {
   // 提出済み（折りたたみ）
   if (doneAssignments.length > 0) {
     const doneHdr = document.createElement("div");
-    doneHdr.className = "tg-header tg-header-done tg-collapsible";
-    doneHdr.innerHTML = `提出済み<span class="tg-count">${doneAssignments.length}</span><span class="tg-toggle-arrow" id="subj-done-arrow">▶</span>`;
+    doneHdr.className = "tg-section-hdr tg-hdr-done tg-collapsible";
+    doneHdr.innerHTML = `<span class="tg-hdr-icon">🎉</span><span class="tg-hdr-label">提出済み</span><span class="tg-count">${doneAssignments.length}</span><span class="tg-toggle-arrow" id="subj-done-arrow">▶</span>`;
     doneHdr.onclick = () => {
       const b = document.getElementById("subj-done-body");
       const a = document.getElementById("subj-done-arrow");
@@ -2532,16 +2533,7 @@ function renderTodoTabSubjectView() {
     doneBody.id = "subj-done-body"; doneBody.className = "hidden";
     doneAssignments.forEach(todo => {
       const index = todos.indexOf(todo);
-      const item = document.createElement("div");
-      item.className = "subj-item todo-done";
-      item.innerHTML = `
-        <label class="subj-check-row">
-          <input type="checkbox" checked onchange="toggleTodo(${index})">
-          <span class="subj-text todo-done-text">${escapeHtml(todo.text)}</span>
-          ${todo.subject ? `<span class="subj-inline-tag">${escapeHtml(todo.subject)}</span>` : ""}
-        </label>
-      `;
-      doneBody.appendChild(item);
+      renderTodoItem(doneBody, todo, index);
     });
     container.appendChild(doneBody);
   }
@@ -2550,7 +2542,7 @@ function renderTodoTabSubjectView() {
   if (regularTodos.length > 0) {
     const note = document.createElement("div");
     note.className = "subj-othernote";
-    note.innerHTML = `通常ToDo ${regularTodos.length}件は「全て」で確認できます`;
+    note.innerHTML = `通常ToDo ${regularTodos.length}件は「グループ」タブで確認できます`;
     container.appendChild(note);
   }
 }
