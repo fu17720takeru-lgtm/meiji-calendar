@@ -1026,18 +1026,6 @@ function createCalendar() {
       chipCount++;
     });
 
-    const dayDate = new Date(currentYear, currentMonth, day);
-    const activeHabitsOnDay = habits.filter(h => !h.archived && isHabitActiveOn(h, dayDate));
-    if (activeHabitsOnDay.length > 0 && dateString <= formatDate(today)) {
-      const loggedIds = habitLogs[dateString] || [];
-      const done  = activeHabitsOnDay.filter(h => loggedIds.includes(h.id)).length;
-      const total = activeHabitsOnDay.length;
-      const habitBadge = document.createElement("div");
-      habitBadge.className = done === total ? "habit-progress habit-all-done" : "habit-progress";
-      habitBadge.textContent = `🔄 ${done}/${total}`;
-      dayDiv.appendChild(habitBadge);
-    }
-
     dayEvents.forEach(event => {
       if (chipCount >= MAX_CHIPS) return;
       const eventDiv = document.createElement("div");
@@ -3936,6 +3924,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   loadClassNotifSettings();
+  refreshScheduleEvents();
   createCalendar();
   updateMonthLabel();
   setupCalendarSwipe();
