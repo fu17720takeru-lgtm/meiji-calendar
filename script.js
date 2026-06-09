@@ -3926,6 +3926,7 @@ window.addEventListener("DOMContentLoaded", () => {
   loadClassNotifSettings();
   refreshScheduleEvents();
   createCalendar();
+  checkWeeklyHabitRenewal();
   updateMonthLabel();
   setupCalendarSwipe();
   renderTodayNotice();
@@ -4537,8 +4538,19 @@ function formatDuration(min) {
   return `${min}分`;
 }
 
+function getMonday(date) {
+  const d = new Date(date);
+  const dow = d.getDay();
+  d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+  d.setHours(0, 0, 0, 0);
+  return formatDate(d);
+}
+
 function isHabitActiveOn(habit, date) {
   if (habit.archived) return false;
+  if (habit.pausedWeeks && habit.pausedWeeks.length > 0) {
+    if (habit.pausedWeeks.includes(getMonday(date))) return false;
+  }
   const freq = habit.frequencyType || "daily";
   const dow = date.getDay();
   if (freq === "daily")   return true;
@@ -4569,12 +4581,14 @@ function getHabitStreak(habitId) {
 
 function getHabitWeeklyCount(habitId) {
   const today = new Date();
-  const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay());
+  const monday = new Date(today);
+  const dow = today.getDay();
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  monday.setHours(0, 0, 0, 0);
   let count = 0;
   for (let i = 0; i < 7; i++) {
-    const d = new Date(startOfWeek);
-    d.setDate(startOfWeek.getDate() + i);
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
     if (d > today) break;
     if ((habitLogs[formatDate(d)] || []).includes(habitId)) count++;
   }
@@ -4769,6 +4783,92 @@ function saveHabitFromForm() {
 }
 
 function showHabits() { renderRecordsTab(); }
+
+// ─── 週次習慣リニューアル ─────────────────────────────────────────────────────
+let _hwmCurrentMonday = "";
+
+function checkWeeklyHabitRenewal() {
+  const today = new Date();
+  if (today.getDay() !== 1) return; // 月曜日のみ
+  const thisMonday = getMonday(today);
+  if (localStorage.getItem("lastHabitWeekConfirmed") === thisMonday) return;
+  if (habits.filter(h => !h.archived).length === 0) return;
+  setTimeout(() => openHabitWeekModal(thisMonday), 900);
+}
+
+function openHabitWeekModal(monday) {
+  _hwmCurrentMonday = monday;
+  const activeHabits = habits.filter(h => !h.archived);
+  if (activeHabits.length === 0) return;
+
+  const monDate = new Date(monday);
+  const sunDate = new Date(monDate);
+  sunDate.setDate(monDate.getDate() + 6);
+  document.getElementById("hwm-week-label").textContent =
+    `${monDate.getMonth()+1}月${monDate.getDate()}日（月）〜${sunDate.getMonth()+1}月${sunDate.getDate()}日（日）`;
+
+  const lastMon = new Date(monDate);
+  lastMon.setDate(monDate.getDate() - 7);
+
+  const listHtml = activeHabits.map(h => {
+    let done = 0, total = 0;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lastMon);
+      d.setDate(lastMon.getDate() + i);
+      if (isHabitActiveOn(h, d)) {
+        total++;
+        if ((habitLogs[formatDate(d)] || []).includes(h.id)) done++;
+      }
+    }
+    const pct = total > 0 ? Math.round(done / total * 100) : 0;
+    const streak = getHabitStreak(h.id);
+    const paused = (h.pausedWeeks || []).includes(monday);
+    return `
+      <label class="hwm-item${paused ? " hwm-item-paused" : ""}">
+        <input type="checkbox" class="hwm-check" value="${h.id}"${paused ? "" : " checked"}>
+        <div class="hwm-item-body">
+          <span class="hwm-item-name">${escapeHtml(h.text)}</span>
+          <div class="hwm-item-meta">
+            <span class="hwm-last-week">${total > 0 ? `先週 ${done}/${total}日` : "初週"}</span>
+            ${streak > 0 ? `<span class="hwm-streak">🔥 ${streak}日</span>` : ""}
+          </div>
+          ${total > 0 ? `<div class="hwm-pct-bar"><div class="hwm-pct-fill" style="width:${pct}%"></div></div>` : ""}
+        </div>
+      </label>`;
+  }).join("");
+
+  document.getElementById("hwm-list").innerHTML = listHtml;
+  document.getElementById("habit-week-modal").classList.remove("hidden");
+}
+
+function confirmWeeklyHabits() {
+  const monday = _hwmCurrentMonday;
+  const modal = document.getElementById("habit-week-modal");
+  modal.querySelectorAll(".hwm-check").forEach(cb => {
+    const habitId = Number(cb.value);
+    const habit = habits.find(h => h.id === habitId);
+    if (!habit) return;
+    if (!habit.pausedWeeks) habit.pausedWeeks = [];
+    if (!cb.checked) {
+      if (!habit.pausedWeeks.includes(monday)) habit.pausedWeeks.push(monday);
+    } else {
+      habit.pausedWeeks = habit.pausedWeeks.filter(w => w !== monday);
+    }
+  });
+  localStorage.setItem("lastHabitWeekConfirmed", monday);
+  saveHabits();
+  closeHabitWeekModal();
+  renderRecordsTab();
+}
+
+function skipHabitWeekModal() {
+  localStorage.setItem("lastHabitWeekConfirmed", _hwmCurrentMonday);
+  closeHabitWeekModal();
+}
+
+function closeHabitWeekModal() {
+  document.getElementById("habit-week-modal").classList.add("hidden");
+}
 
 // ─── 電車遅延情報 ─────────────────────────────────────────────────────────────
 async function fetchTrainDelays() {
@@ -5441,14 +5541,17 @@ function renderRecordsTab() {
   const todayStr = formatDate(today);
   const dayNames = ["日", "月", "火", "水", "木", "金", "土"];
 
-  // 週の始め（日曜）
+  // 週の始め（月曜）
   const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay());
+  const _wdow = today.getDay();
+  weekStart.setDate(today.getDate() - (_wdow === 0 ? 6 : _wdow - 1));
+  weekStart.setHours(0, 0, 0, 0);
+  const _daysSinceMon = _wdow === 0 ? 6 : _wdow - 1;
 
   // 今週の習慣達成状況を集計
   const activeHabits = habits.filter(h => !h.archived);
   let totalInstances = 0, doneInstances = 0;
-  for (let i = 0; i <= today.getDay(); i++) {
+  for (let i = 0; i <= _daysSinceMon; i++) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
     const dStr = formatDate(d);

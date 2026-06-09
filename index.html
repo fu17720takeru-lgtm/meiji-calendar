@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=1.5.3">
+<link rel="stylesheet" href="style.css?v=1.5.4">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -568,6 +568,23 @@
   </div>
 </div>
 
+<!-- 週次習慣リニューアルモーダル -->
+<div id="habit-week-modal" class="modal hidden">
+  <div class="hwm-box" onclick="event.stopPropagation()">
+    <div class="hwm-header">
+      <span class="hwm-icon">🗓️</span>
+      <h2 class="hwm-title">今週の習慣</h2>
+      <p id="hwm-week-label" class="hwm-week-label"></p>
+    </div>
+    <p class="hwm-desc">続ける習慣にチェックを入れてください</p>
+    <div id="hwm-list" class="hwm-list"></div>
+    <div class="hwm-footer">
+      <button class="hwm-btn-primary" onclick="confirmWeeklyHabits()">今週も続ける</button>
+      <button class="hwm-btn-secondary" onclick="skipHabitWeekModal()">後で確認する</button>
+    </div>
+  </div>
+</div>
+
  <!-- 誕生日ポップアップ -->
 <div id="birthday-modal" class="modal hidden" onclick="closeBirthdayModalByOutside(event)">
   <div class="modal-content" onclick="event.stopPropagation()">
@@ -771,7 +788,7 @@
   </div>
 </div>
 
- <script src="script.js?v=1.5.3"></script>
+ <script src="script.js?v=1.5.4"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {

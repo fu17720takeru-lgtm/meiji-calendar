@@ -4181,3 +4181,65 @@ body.sync-visible {
   font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .rc-goals-add-btn:active { background: #4f46e5; }
+
+/* ── 週次習慣リニューアルモーダル ──────────────────────────────── */
+#habit-week-modal { align-items: flex-end; }
+.hwm-box {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 20px calc(28px + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.12);
+}
+.hwm-header { text-align: center; margin-bottom: 4px; }
+.hwm-icon   { font-size: 34px; display: block; margin-bottom: 6px; }
+.hwm-title  { font-size: 19px; font-weight: 700; margin: 0 0 3px; color: #111827; }
+.hwm-week-label { font-size: 12px; color: #6b7280; margin: 0 0 10px; }
+.hwm-desc   { font-size: 12px; color: #9ca3af; text-align: center; margin: 0 0 16px; }
+
+.hwm-list   { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.hwm-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 12px;
+  border-radius: 14px;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: background .15s;
+}
+.hwm-item:active      { background: #f3f4f6; }
+.hwm-item-paused      { opacity: .55; }
+.hwm-check {
+  width: 22px; height: 22px;
+  margin-top: 2px;
+  accent-color: #2563eb;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.hwm-item-body  { flex: 1; min-width: 0; }
+.hwm-item-name  { font-size: 15px; font-weight: 600; display: block; margin-bottom: 4px; color: #111827; }
+.hwm-item-meta  { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+.hwm-last-week  { font-size: 12px; color: #6b7280; }
+.hwm-streak     { font-size: 12px; color: #ef4444; font-weight: 600; }
+.hwm-pct-bar    { height: 5px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+.hwm-pct-fill   { height: 100%; background: #2563eb; border-radius: 3px; }
+
+.hwm-footer { display: flex; flex-direction: column; gap: 10px; }
+.hwm-btn-primary {
+  background: #2563eb; color: #fff;
+  border: none; border-radius: 14px;
+  padding: 15px; font-size: 16px; font-weight: 700;
+  cursor: pointer; width: 100%;
+}
+.hwm-btn-primary:active { background: #1d4ed8; }
+.hwm-btn-secondary {
+  background: #f3f4f6; color: #6b7280;
+  border: none; border-radius: 14px;
+  padding: 12px; font-size: 14px;
+  cursor: pointer; width: 100%;
+}
+.hwm-btn-secondary:active { background: #e5e7eb; }
