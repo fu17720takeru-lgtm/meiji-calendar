@@ -5749,7 +5749,109 @@ function renderRecordsTab() {
   </div>`;
   html += `</div>`;
 
+  // ── 過去の記録 ──
+  html += _buildWeekHistorySection();
+
   container.innerHTML = html;
+}
+
+// ─── 過去の週次達成記録 ───────────────────────────────────────────────────────
+
+let _histWeeksToShow = 4;
+
+function showMoreHabitHistory() {
+  _histWeeksToShow += 8;
+  renderRecordsTab();
+}
+
+function _buildWeekHistorySection() {
+  const activeHabits = habits.filter(h => !h.archived);
+  if (activeHabits.length === 0) return "";
+
+  const today    = new Date();
+  const thisMonStr = getMonday(today);
+
+  // 過去12週分のデータを収集
+  const allWeeks = [];
+  for (let w = 1; w <= 12; w++) {
+    const monDate = new Date(thisMonStr);
+    monDate.setDate(monDate.getDate() - w * 7);
+    const sunDate = new Date(monDate);
+    sunDate.setDate(monDate.getDate() + 6);
+    const monStr  = formatDate(monDate);
+    const sunStr  = formatDate(sunDate);
+
+    let totalActive = 0, totalDone = 0;
+    const habitRows = [];
+
+    activeHabits.forEach(h => {
+      // 習慣がその週に存在していたか確認
+      if (h.createdAt && h.createdAt > sunStr) return;
+
+      let active = 0, done = 0;
+      const dots = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(monDate);
+        d.setDate(monDate.getDate() + i);
+        if (d > today) { dots.push("future"); continue; }
+        const isActive = isHabitActiveOn(h, d);
+        if (isActive) {
+          active++;
+          const isDone = (habitLogs[formatDate(d)] || []).includes(h.id);
+          if (isDone) { done++; dots.push("done"); }
+          else          dots.push("miss");
+        } else {
+          dots.push("off");
+        }
+      }
+      if (active === 0) return;
+      totalActive += active;
+      totalDone   += done;
+      habitRows.push({ habit: h, active, done, dots });
+    });
+
+    if (totalActive === 0) continue;
+    allWeeks.push({ monDate, sunDate, totalActive, totalDone, habitRows });
+  }
+
+  if (allWeeks.length === 0) return "";
+
+  const visibleWeeks = allWeeks.slice(0, _histWeeksToShow);
+  const hasMore = allWeeks.length > _histWeeksToShow;
+
+  let html = `<div class="rc-section-header" style="margin-top:16px">
+    <span class="rc-section-title">過去の記録</span>
+  </div>`;
+
+  visibleWeeks.forEach(({ monDate, sunDate, totalActive, totalDone, habitRows }) => {
+    const pct = Math.round(totalDone / totalActive * 100);
+    const pctClass = pct >= 80 ? "rc-hist-pct-high" : pct >= 50 ? "rc-hist-pct-mid" : "rc-hist-pct-low";
+    const weekLabel = `${monDate.getMonth()+1}/${monDate.getDate()}（月）〜${sunDate.getMonth()+1}/${sunDate.getDate()}（日）`;
+
+    const habitsHtml = habitRows.map(({ habit, active, done, dots }) => {
+      const dotsHtml = dots.map(s => `<span class="rh-dot rh-dot-${s}"></span>`).join("");
+      return `<div class="rc-hist-habit-row">
+        <span class="rc-hist-habit-name">${escapeHtml(habit.text)}</span>
+        <div class="rc-hist-dots">${dotsHtml}</div>
+        <span class="rc-hist-count">${done}/${active}</span>
+      </div>`;
+    }).join("");
+
+    html += `<div class="rc-history-card">
+      <div class="rc-hist-header">
+        <span class="rc-hist-week">${weekLabel}</span>
+        <span class="${pctClass}">${pct}%</span>
+      </div>
+      <div class="rc-hist-bar-wrap"><div class="rc-hist-bar" style="width:${pct}%"></div></div>
+      <div class="rc-hist-habits">${habitsHtml}</div>
+    </div>`;
+  });
+
+  if (hasMore) {
+    html += `<button class="rc-hist-more-btn" onclick="showMoreHabitHistory()">さらに表示（${allWeeks.length - _histWeeksToShow}週分）</button>`;
+  }
+
+  return html;
 }
 
 function _buildHabitWeekDots(habit, today, weekStart, dayNames) {
