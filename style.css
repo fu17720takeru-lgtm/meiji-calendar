@@ -4300,3 +4300,40 @@ body.sync-visible {
   margin-top: 4px;
 }
 .rc-hist-more-btn:active { background: #f3f4f6; }
+
+/* ── モーダル内ボタンをタップしやすく ──────────────────────────── */
+/* 保存・追加など（クラスなし）→ 青ボタン大 */
+.modal-content button:not([class]) {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  margin-top: 10px;
+  border: none;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modal-content button:not([class]):active { background: #1d4ed8; }
+
+/* キャンセル・閉じる・戻る → グレーボタン大 */
+.modal-btn-secondary {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.modal-btn-secondary:active { background: #f3f4f6; }
+
+/* ToDoインラインフォームのボタン */
+.ttaf-cancel { padding: 14px 20px !important; font-size: 15px !important; }
+.ttaf-save   { padding: 14px !important;        font-size: 16px !important; }

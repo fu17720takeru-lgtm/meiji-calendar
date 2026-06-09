@@ -7,7 +7,7 @@
 
   <title>明治大学カレンダー</title>
 
-<link rel="stylesheet" href="style.css?v=1.5.5">
+<link rel="stylesheet" href="style.css?v=1.5.6">
   <link rel="manifest" href="manifest.json">
 
   <meta name="theme-color" content="#ffffff">
@@ -404,7 +404,7 @@
         </select>
 
         <button onclick="saveEvent()">保存</button>
-        <button onclick="showViewArea()">戻る</button>
+        <button class="modal-btn-secondary" onclick="showViewArea()">戻る</button>
       </div>
     </div>
   </div>
@@ -495,7 +495,7 @@
     </select>
 
     <button onclick="addTodo()">追加してToDoタブで確認</button>
-    <button onclick="closeTodoModal()">閉じる</button>
+    <button class="modal-btn-secondary" onclick="closeTodoModal()">閉じる</button>
   </div>
 </div>
 <!-- 習慣追加・編集モーダル -->
@@ -564,7 +564,7 @@
     <textarea id="habit-memo-input" placeholder="メモ" rows="2"></textarea>
 
     <button onclick="saveHabitFromForm()">保存</button>
-    <button onclick="closeHabitFormModal()">キャンセル</button>
+    <button class="modal-btn-secondary" onclick="closeHabitFormModal()">キャンセル</button>
   </div>
 </div>
 
@@ -601,7 +601,7 @@
     </div>
 
     <button onclick="saveBirthday()">保存</button>
-    <button onclick="closeBirthdayModal()">閉じる</button>
+    <button class="modal-btn-secondary" onclick="closeBirthdayModal()">閉じる</button>
   </div>
 </div>
 
@@ -670,7 +670,7 @@
       </label>
     </div>
 
-    <button onclick="closeCommuteModal()">閉じる</button>
+    <button class="modal-btn-secondary" onclick="closeCommuteModal()">閉じる</button>
 
     <div id="commute-advice" class="commute-advice"></div>
 
@@ -704,7 +704,7 @@
     <button onclick="exportShareData()">共有データを作る</button>
     <textarea id="share-text" placeholder="ここに共有データが表示されます。取り込む場合はここに貼り付けてください。"></textarea>
     <button onclick="importShareData()">貼り付けたデータを取り込む</button>
-    <button onclick="closeShareModal()">閉じる</button>
+    <button class="modal-btn-secondary" onclick="closeShareModal()">閉じる</button>
   </div>
 </div>
 
@@ -737,7 +737,7 @@
       <button id="account-submit-btn" onclick="submitAuth()">ログイン</button>
     </div>
 
-    <button onclick="closeAccountModal()">閉じる</button>
+    <button class="modal-btn-secondary" onclick="closeAccountModal()">閉じる</button>
   </div>
 </div>
 
@@ -788,7 +788,7 @@
   </div>
 </div>
 
- <script src="script.js?v=1.5.5"></script>
+ <script src="script.js?v=1.5.6"></script>
 <script>
   // Service Workerが更新されたら自動リロード
   if ('serviceWorker' in navigator) {
